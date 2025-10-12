@@ -1,0 +1,65 @@
+{{- if .Values.ui.enabled }}
+{{- $_ := set . "serviceName" "ui" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "cloudscan.fullname" . }}-ui
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cloudscan.service.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.ui.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "cloudscan.service.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "cloudscan.service.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- include "cloudscan.podSecurityContext" . | nindent 8 }}
+      containers:
+      - name: ui
+        image: {{ printf "%s/%s:%s" (.Values.ui.image.registry | default .Values.global.imageRegistry | default "docker.io") .Values.ui.image.repository (.Values.ui.image.tag | default "latest") }}
+        imagePullPolicy: {{ .Values.ui.image.pullPolicy | default .Values.global.imagePullPolicy | default "IfNotPresent" }}
+        securityContext:
+          {{- include "cloudscan.containerSecurityContext" . | nindent 10 }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.ui.service.port }}
+          protocol: TCP
+        env:
+          {{- include "cloudscan.common.env" . | nindent 10 }}
+          {{- with .Values.ui.env }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        resources:
+          {{- toYaml .Values.ui.resources | nindent 10 }}
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: nginx-cache
+          mountPath: /var/cache/nginx
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: nginx-cache
+        emptyDir: {}
+{{- end }}

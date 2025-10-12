@@ -1,0 +1,24 @@
+
+orchestrator:
+  image:
+    tag: "1.0.0"
+
+apiGateway:
+  image:
+    tag: "1.0.0"
+
+storage:
+  image:
+    tag: "1.0.0"
+
+websocket:
+  image:
+    tag: "1.0.0"
+
+ui:
+  image:
+    tag: "1.0.0"
+
+runner:
+  image:
+    tag: "1.0.0"

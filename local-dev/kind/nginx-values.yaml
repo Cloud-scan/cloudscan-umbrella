@@ -1,0 +1,11 @@
+controller:
+  hostPort:
+    enabled: true
+  service:
+    type: NodePort
+  publishService:
+    enabled: false
+  extraArgs:
+    publish-status-address: localhost
+  config:
+    allow-snippet-annotations: "true"

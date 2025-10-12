@@ -1,0 +1,70 @@
+{{- if .Values.storage.enabled }}
+{{- $_ := set . "serviceName" "storage" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "cloudscan.fullname" . }}-storage
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cloudscan.service.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.storage.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "cloudscan.service.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "cloudscan.service.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- include "cloudscan.podSecurityContext" . | nindent 8 }}
+      containers:
+      - name: storage
+        image: {{ printf "%s/%s:%s" (.Values.storage.image.registry | default .Values.global.imageRegistry | default "docker.io") .Values.storage.image.repository (.Values.storage.image.tag | default "latest") }}
+        imagePullPolicy: {{ .Values.storage.image.pullPolicy | default .Values.global.imagePullPolicy | default "IfNotPresent" }}
+        securityContext:
+          {{- include "cloudscan.containerSecurityContext" . | nindent 10 }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.storage.service.port }}
+          protocol: TCP
+        env:
+          {{- include "cloudscan.common.env" . | nindent 10 }}
+          {{- with .Values.storage.env }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        resources:
+          {{- toYaml .Values.storage.resources | nindent 10 }}
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        {{- if and .Values.storage.persistence.enabled (eq .Values.storage.storageType "local") }}
+        - name: storage-data
+          mountPath: /data
+        {{- end }}
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      {{- if and .Values.storage.persistence.enabled (eq .Values.storage.storageType "local") }}
+      - name: storage-data
+        persistentVolumeClaim:
+          claimName: {{ include "cloudscan.fullname" . }}-storage
+      {{- end }}
+{{- end }}

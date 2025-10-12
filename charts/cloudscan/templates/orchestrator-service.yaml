@@ -1,0 +1,23 @@
+{{- if .Values.orchestrator.enabled }}
+{{- $_ := set . "serviceName" "orchestrator" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "cloudscan.fullname" . }}-orchestrator
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cloudscan.service.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.orchestrator.service.type | default "ClusterIP" }}
+  ports:
+  - port: {{ .Values.orchestrator.service.grpcPort }}
+    targetPort: grpc
+    protocol: TCP
+    name: grpc
+  - port: {{ .Values.orchestrator.service.httpPort }}
+    targetPort: http
+    protocol: TCP
+    name: http
+  selector:
+    {{- include "cloudscan.service.selectorLabels" . | nindent 4 }}
+{{- end }}

@@ -1,0 +1,268 @@
+# Default values for cloudscan
+
+## Global settings
+global:
+  imageRegistry: docker.io
+  imagePullPolicy: IfNotPresent
+  imagePullSecrets: []
+  storageClass: ""
+
+## Orchestrator service
+orchestrator:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: cloudscan-orchestrator
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  service:
+    type: ClusterIP
+    grpcPort: 9999
+    httpPort: 8081
+  env:
+    - name: DATABASE_URL
+      value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@cloudscan-postgresql:5432/$(POSTGRES_DB)"
+    - name: REDIS_URL
+      value: "redis://:$(REDIS_PASSWORD)@cloudscan-redis-master:6379/0"
+    - name: LOG_LEVEL
+      value: "info"
+  serviceAccount:
+    create: true
+    name: cloudscan-orchestrator
+  rbac:
+    create: true
+
+## UI service
+ui:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: cloudscan-ui
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  service:
+    type: ClusterIP
+    port: 3000
+  env:
+    - name: API_URL
+      value: "http://cloudscan-api-gateway:8080"
+    - name: WS_URL
+      value: "ws://cloudscan-websocket:9090"
+
+## Storage service
+storage:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: cloudscan-storage
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8082
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  # Storage backend configuration
+  storageType: local  # local, s3, gcs, or azure
+  persistence:
+    enabled: true
+    size: 100Gi
+  s3:
+    bucket: ""
+    region: us-west-2
+    endpoint: ""  # Optional: for MinIO/S3-compatible
+    accessKey: ""
+    secretKey: ""
+  gcs:
+    bucket: ""
+    projectId: ""
+    credentialsSecret: ""
+  azure:
+    accountName: ""
+    container: ""
+    accountKey: ""
+  env:
+    - name: STORAGE_TYPE
+      value: "local"
+    - name: LOG_LEVEL
+      value: "info"
+
+## API Gateway
+apiGateway:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: cloudscan-api-gateway
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  env:
+    - name: ORCHESTRATOR_URL
+      value: "cloudscan-orchestrator:9999"
+    - name: LOG_LEVEL
+      value: "info"
+
+## WebSocket service
+websocket:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: cloudscan-websocket
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 9090
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  env:
+    - name: REDIS_URL
+      value: "redis://:$(REDIS_PASSWORD)@cloudscan-redis-master:6379/0"
+    - name: LOG_LEVEL
+      value: "info"
+
+## Runner (Job template)
+runner:
+  enabled: true
+  image:
+    repository: cloudscan-runner
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 2000m
+      memory: 4Gi
+    limits:
+      cpu: 4000m
+      memory: 8Gi
+  scanners:
+    semgrep:
+      enabled: true
+    trivy:
+      enabled: true
+    trufflehog:
+      enabled: true
+    scancode:
+      enabled: true
+
+## PostgreSQL (Bitnami chart)
+postgresql:
+  enabled: true
+  global:
+    imageRegistry: docker.io
+  image:
+    registry: docker.io
+    repository: bitnami/postgresql
+    tag: 15.4.0-debian-11-r0
+  auth:
+    username: cloudscan
+    password: changeme
+    database: cloudscan
+  primary:
+    persistence:
+      enabled: true
+      size: 20Gi
+
+## Redis (Bitnami chart)
+redis:
+  enabled: true
+  image:
+    registry: docker.io
+    repository: bitnami/redis
+    tag: 7.0.12-debian-11-r34
+  auth:
+    enabled: true
+    password: redis123
+  master:
+    persistence:
+      enabled: false
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+
+## Ingress
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+  hosts:
+    - host: cloudscan.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: cloudscan-ui
+              port: 3000
+        - path: /api
+          pathType: Prefix
+          backend:
+            service:
+              name: cloudscan-api-gateway
+              port: 8080
+        - path: /ws
+          pathType: Prefix
+          backend:
+            service:
+              name: cloudscan-websocket
+              port: 9090
+  tls:
+    - secretName: cloudscan-tls
+      hosts:
+        - cloudscan.example.com
+
+## Service Account
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+## RBAC
+rbac:
+  create: true
+
+## Monitoring
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: false  # Requires Prometheus Operator

@@ -1,0 +1,53 @@
+Thank you for installing {{ .Chart.Name }}.
+
+Your release is named {{ .Release.Name }}.
+
+To learn more about the release, try:
+
+  $ helm status {{ .Release.Name }} -n {{ .Release.Namespace }}
+  $ helm get all {{ .Release.Name }} -n {{ .Release.Namespace }}
+
+{{- if .Values.ingress.enabled }}
+{{- range $host := .Values.ingress.hosts }}
+
+You can access the CloudScan UI at: {{ if $.Values.ingress.tls }}https{{ else }}http{{ end }}://{{ $host.host }}
+{{- end }}
+{{- else }}
+
+Get the application URL by running these commands:
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name=ui,app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT=$(kubectl get pod --namespace {{ .Release.Namespace }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+  echo "Visit http://127.0.0.1:8080 to use your application"
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:$CONTAINER_PORT
+{{- end }}
+
+CloudScan services deployed:
+{{- if .Values.orchestrator.enabled }}
+  ✓ Orchestrator (gRPC: {{ .Values.orchestrator.service.grpcPort }}, HTTP: {{ .Values.orchestrator.service.httpPort }})
+{{- end }}
+{{- if .Values.apiGateway.enabled }}
+  ✓ API Gateway (HTTP: {{ .Values.apiGateway.service.port }})
+{{- end }}
+{{- if .Values.storage.enabled }}
+  ✓ Storage Service (HTTP: {{ .Values.storage.service.port }})
+{{- end }}
+{{- if .Values.websocket.enabled }}
+  ✓ WebSocket Service (WS: {{ .Values.websocket.service.port }})
+{{- end }}
+{{- if .Values.ui.enabled }}
+  ✓ UI (HTTP: {{ .Values.ui.service.port }})
+{{- end }}
+
+Database:
+{{- if .Values.postgresql.enabled }}
+  ✓ PostgreSQL (internal)
+{{- else }}
+  ✓ External PostgreSQL
+{{- end }}
+
+{{- if .Values.redis.enabled }}
+Cache:
+  ✓ Redis (internal)
+{{- end }}
+
+For more information, visit: https://github.com/cloudscan/cloudscan

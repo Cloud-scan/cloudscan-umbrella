@@ -1,0 +1,19 @@
+{{- if .Values.websocket.enabled }}
+{{- $_ := set . "serviceName" "websocket" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "cloudscan.fullname" . }}-websocket
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cloudscan.service.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.websocket.service.type | default "ClusterIP" }}
+  ports:
+  - port: {{ .Values.websocket.service.port }}
+    targetPort: ws
+    protocol: TCP
+    name: ws
+  selector:
+    {{- include "cloudscan.service.selectorLabels" . | nindent 4 }}
+{{- end }}
