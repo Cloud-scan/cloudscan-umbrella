@@ -1,0 +1,179 @@
+name: Helm Chart - Lint, Pack & Publish
+
+on:
+  push:
+    branches:
+      - main
+      - 'release/**'
+    paths:
+      - 'charts/cloudscan/**'
+      - 'chart-versions/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'charts/cloudscan/**'
+
+env:
+  CHART_NAME: cloudscan
+  CHART_PATH: charts/cloudscan
+  DOCKER_REGISTRY: docker.io
+  DOCKER_ORG: mahiop123
+
+jobs:
+  lint:
+    name: Lint Helm Chart
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'latest'
+
+      - name: Lint Helm chart
+        run: |
+          cd ${{ env.CHART_PATH }}
+          helm dependency update
+          helm lint .
+
+  pack-and-publish:
+    name: Package and Publish Helm Chart
+    runs-on: ubuntu-latest
+    needs: lint
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'latest'
+
+      - name: Generate chart version
+        id: chart_version
+        run: |
+          if [ "${{ github.ref_name }}" == "main" ]; then
+            VERSION="$(date +%Y).$(date +%m).$(git rev-list --count HEAD)"
+          elif [[ "${{ github.ref_name }}" =~ ^release/ ]]; then
+            BRANCH_NAME="${{ github.ref_name }}"
+            VERSION="$(date +%Y).$(date +%m).$(git rev-list --count HEAD)-${BRANCH_NAME#release/}"
+          else
+            VERSION="0.0.0-dev-${{ github.run_number }}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Generated chart version: $VERSION"
+
+      - name: Update Chart.yaml version
+        run: |
+          VERSION="${{ steps.chart_version.outputs.version }}"
+          cd ${{ env.CHART_PATH }}
+          # Update chart version
+          sed -i "s/^version:.*/version: $VERSION/" Chart.yaml
+          # Update appVersion to match
+          sed -i "s/^appVersion:.*/appVersion: \"$VERSION\"/" Chart.yaml
+
+          echo "Updated Chart.yaml:"
+          cat Chart.yaml
+
+      - name: Update dependencies
+        run: |
+          cd ${{ env.CHART_PATH }}
+          helm dependency update
+
+      - name: Package Helm chart
+        run: |
+          helm package ${{ env.CHART_PATH }} -d .helm-packages
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Publish to GitHub Pages
+        run: |
+          VERSION="${{ steps.chart_version.outputs.version }}"
+          PACKAGE_FILE=".helm-packages/${{ env.CHART_NAME }}-${VERSION}.tgz"
+
+          # Create gh-pages branch if it doesn't exist
+          git fetch origin gh-pages || git checkout --orphan gh-pages || true
+          git checkout gh-pages || git checkout --orphan gh-pages
+
+          # Create packages directory
+          mkdir -p packages
+
+          # Copy new package
+          cp "$PACKAGE_FILE" packages/
+
+          # Generate or update index
+          if [ -f "index.yaml" ]; then
+            helm repo index packages --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }} --merge index.yaml
+          else
+            helm repo index packages --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+          fi
+
+          mv packages/index.yaml .
+
+          # Commit and push
+          git add packages/ index.yaml
+          git commit -m "Publish ${{ env.CHART_NAME }} chart version ${VERSION}
+
+          Source: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+          Triggered by: ${{ github.actor }}" || echo "No changes to commit"
+
+          git push origin gh-pages
+
+      - name: Log in to Docker Hub (OCI Registry)
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.DOCKER_REGISTRY }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Push to OCI Registry (Docker Hub)
+        run: |
+          VERSION="${{ steps.chart_version.outputs.version }}"
+          PACKAGE_FILE=".helm-packages/${{ env.CHART_NAME }}-${VERSION}.tgz"
+
+          # Push to OCI registry (Docker Hub)
+          helm push "$PACKAGE_FILE" oci://${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_ORG }}/charts
+
+          echo "Chart published to oci://${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_ORG }}/charts/${{ env.CHART_NAME }}:${VERSION}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.chart_version.outputs.version }}
+          name: CloudScan Chart v${{ steps.chart_version.outputs.version }}
+          body: |
+            ## CloudScan Helm Chart v${{ steps.chart_version.outputs.version }}
+
+            ### Installation
+
+            **From GitHub Pages:**
+            ```bash
+            helm repo add cloudscan https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+            helm repo update
+            helm install cloudscan cloudscan/cloudscan --version ${{ steps.chart_version.outputs.version }}
+            ```
+
+            **From OCI Registry (Docker Hub):**
+            ```bash
+            helm install cloudscan oci://${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_ORG }}/charts/cloudscan --version ${{ steps.chart_version.outputs.version }}
+            ```
+
+            ### Component Versions
+            Check `chart-versions/` directory for individual service versions.
+
+            ---
+            Source: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+          files: .helm-packages/*.tgz
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
