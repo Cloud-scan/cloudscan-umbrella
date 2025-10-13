@@ -2,8 +2,39 @@ apiVersion: v1
 entries:
   cloudscan:
   - apiVersion: v2
+    appVersion: 2025.10.22
+    created: "2025-10-13T08:03:42.651350196Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: https://charts.bitnami.com/bitnami
+      version: 12.x.x
+    - condition: redis.enabled
+      name: redis
+      repository: https://charts.bitnami.com/bitnami
+      version: 17.x.x
+    description: CloudScan - Open Source Security & Quality Scanning Platform
+    digest: 6eda0734bf443b6cb124cbc8f82adb2c1833a00ae7e5b272898efddef9c00970
+    home: https://github.com/cloudscan/cloudscan
+    keywords:
+    - security
+    - sast
+    - sca
+    - scanning
+    - devsecops
+    maintainers:
+    - email: team@cloudscan.dev
+      name: CloudScan Team
+    name: cloudscan
+    sources:
+    - https://github.com/cloudscan/cloudscan
+    type: application
+    urls:
+    - https://Cloud-scan.github.io/cloudscan-umbrella/cloudscan-2025.10.22.tgz
+    version: 2025.10.22
+  - apiVersion: v2
     appVersion: 2025.10.21
-    created: "2025-10-13T07:30:51.527438866Z"
+    created: "2025-10-13T08:03:42.643104921Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -34,7 +65,7 @@ entries:
     version: 2025.10.21
   - apiVersion: v2
     appVersion: 2025.10.19
-    created: "2025-10-13T07:30:51.51818045Z"
+    created: "2025-10-13T08:03:42.633534219Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -65,7 +96,7 @@ entries:
     version: 2025.10.19
   - apiVersion: v2
     appVersion: 2025.10.17
-    created: "2025-10-13T07:30:51.506052566Z"
+    created: "2025-10-13T08:03:42.622395872Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -96,7 +127,7 @@ entries:
     version: 2025.10.17
   - apiVersion: v2
     appVersion: 2025.10.15
-    created: "2025-10-13T07:30:51.492999656Z"
+    created: "2025-10-13T08:03:42.607288289Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -127,7 +158,7 @@ entries:
     version: 2025.10.15
   - apiVersion: v2
     appVersion: 2025.10.13
-    created: "2025-10-13T07:30:51.482728927Z"
+    created: "2025-10-13T08:03:42.59626633Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -158,7 +189,7 @@ entries:
     version: 2025.10.13
   - apiVersion: v2
     appVersion: 2025.10.11
-    created: "2025-10-13T07:30:51.468111211Z"
+    created: "2025-10-13T08:03:42.582518361Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -187,4 +218,4 @@ entries:
     urls:
     - https://Cloud-scan.github.io/cloudscan-umbrella/cloudscan-2025.10.11.tgz
     version: 2025.10.11
-generated: "2025-10-13T07:30:51.458333861Z"
+generated: "2025-10-13T08:03:42.572858537Z"
