@@ -132,15 +132,6 @@ jobs:
 
           git push origin gh-pages
 
-      - name: Log in to Docker Hub (OCI Registry)
-        uses: docker/login-action@v3
-        continue-on-error: true
-        id: docker_login
-        with:
-          registry: ${{ env.DOCKER_REGISTRY }}
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
       - name: Ensure Helm login
         run: |
           helm registry login ${{ env.DOCKER_REGISTRY }} \
@@ -156,7 +147,7 @@ jobs:
 
           # Push to OCI registry (Docker Hub)
           if helm push "$PACKAGE_FILE" oci://${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_ORG }}/charts; then
-            echo "✓ Chart published to oci://${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_ORG }}/charts/${{ env.CHART_NAME }}:${VERSION}"
+            echo "✓ Chart published to oci://${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_ORG }}/${{ env.CHART_NAME }}:${VERSION}"
           else
             echo "⚠ Failed to push to Docker Hub OCI registry. Chart is still available via GitHub Pages and Releases."
           fi
