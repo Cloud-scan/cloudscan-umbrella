@@ -141,6 +141,12 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Ensure Helm login
+        run: |
+          helm registry login ${{ env.DOCKER_REGISTRY }} \
+            -u ${{ secrets.DOCKER_USERNAME }} \
+            -p ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Push to OCI Registry (Docker Hub)
         if: steps.docker_login.outcome == 'success'
         continue-on-error: true
