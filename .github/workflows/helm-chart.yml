@@ -133,6 +133,7 @@ jobs:
           git push origin gh-pages
 
       - name: Ensure Helm login
+        id: docker_login
         run: |
           helm registry login ${{ env.DOCKER_REGISTRY }} \
             -u ${{ secrets.DOCKER_USERNAME }} \
@@ -146,7 +147,7 @@ jobs:
           PACKAGE_FILE=".helm-packages/${{ env.CHART_NAME }}-${VERSION}.tgz"
 
           # Push to OCI registry (Docker Hub)
-          if helm push "$PACKAGE_FILE" oci://${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_ORG }}/charts; then
+          if helm push "$PACKAGE_FILE" oci://${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_ORG }}; then
             echo "✓ Chart published to oci://${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_ORG }}/${{ env.CHART_NAME }}:${VERSION}"
           else
             echo "⚠ Failed to push to Docker Hub OCI registry. Chart is still available via GitHub Pages and Releases."
@@ -171,7 +172,7 @@ jobs:
 
             **From OCI Registry (Docker Hub):**
             ```bash
-            helm install cloudscan oci://${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_ORG }}/charts/cloudscan --version ${{ steps.chart_version.outputs.version }}
+            helm install cloudscan oci://${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_ORG }}/cloudscan --version ${{ steps.chart_version.outputs.version }}
             ```
 
             ### Component Versions
