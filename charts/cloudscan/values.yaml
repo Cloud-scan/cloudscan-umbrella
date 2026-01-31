@@ -97,6 +97,8 @@ global:
       accountKey: ""
       # Secret with Azure credentials (key: accountKey)
       existingSecret: ""
+    persistence:
+      enabled: true
 
   # Ingress configuration (applies to all services)
   ingress:
