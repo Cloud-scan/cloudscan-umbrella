@@ -32,23 +32,61 @@ CloudScan is a **free, open-source alternative** to expensive commercial securit
 CloudScan is built as a distributed microservices platform:
 
 ```
-┌─────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│  React UI   │────▶│  API Gateway     │────▶│  Orchestrator   │
-└─────────────┘     └──────────────────┘     └────────┬────────┘
-                                                      │
-                    ┌─────────────────────────────────┼─────────┐
-                    │                                 │         │
-                    ▼                                 ▼         ▼
-            ┌───────────────┐              ┌──────────────┐   ┌──────┐
-            │    Storage    │              │  WebSocket   │   │ K8s  │
-            │    Service    │              │   Service    │   │ Jobs │
-            └───────────────┘              └──────────────┘   └───┬──┘
-                                                                   │
-                                                                   ▼
-                                                          ┌────────────────┐
-                                                          │ Scanner Runners│
-                                                          │ (Semgrep, etc) │
-                                                          └────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                         React UI                             │
+│                   (Upload, View Results)                     │
+└────┬─────────────────────────┬──────────────────────────┬────┘
+     │                         │                          │
+     │ 1. Create scan         │ 2. Upload source         │ 3. Watch logs
+     ▼                         ▼                          ▼
+┌──────────────┐      ┌─────────────────┐      ┌──────────────────┐
+│ API Gateway  │      │ Storage Service │      │ WebSocket Service│
+│ (REST/gRPC)  │      │ (gRPC)          │      │ (Live updates)   │
+└──────┬───────┘      └────────┬────────┘      └────────┬─────────┘
+       │                       │                         │
+       │ CreateScan(artifact_id)│                        │
+       ▼                       │                         │
+┌────────────────────┐         │                         │
+│  Orchestrator      │         │                         │
+│  - Scan mgmt       │◄────────┘                         │
+│  - K8s dispatcher  │  GetArtifact(presigned URL)       │
+│  - gRPC APIs       │                                   │
+└──────┬─────────────┘                                   │
+       │                                                 │
+       │ 4. Create K8s Job                              │
+       │    with SOURCE_DOWNLOAD_URL                    │
+       ▼                                                 │
+┌─────────────────────┐                                 │
+│ Kubernetes Cluster  │                                 │
+│                     │                                 │
+│  ┌───────────────┐  │                                 │
+│  │ Runner Pod    │  │                                 │
+│  │               │  │      5. Stream logs             │
+│  │ - Semgrep     │──┼─────────────────────────────────┘
+│  │ - Trivy       │  │
+│  │ - TruffleHog  │  │
+│  │ - ScanCode    │  │
+│  └───────┬───────┘  │
+└──────────┼──────────┘
+           │
+           │ 6. Download source (presigned URL)
+           ▼
+┌─────────────────────┐
+│   S3/MinIO/GCS      │
+│   Object Storage    │
+│   - Source code     │
+│   - Scan artifacts  │
+└─────────────────────┘
+           │
+           │ 7. CreateFindings(gRPC)
+           │    UpdateScan(gRPC)
+           ▼
+     ┌──────────────┐
+     │ PostgreSQL   │
+     │ - Scans      │
+     │ - Findings   │
+     │ - Artifacts  │
+     └──────────────┘
 ```
 
 **Services:**

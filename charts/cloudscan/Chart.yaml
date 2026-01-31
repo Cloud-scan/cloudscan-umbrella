@@ -18,10 +18,14 @@ maintainers:
     email: team@cloudscan.dev
 dependencies:
   - name: postgresql
-    version: "12.x.x"
+    version: "18.2.3"
     repository: https://charts.bitnami.com/bitnami
-    condition: postgresql.enabled
+    condition: onPrem.postgresql
   - name: redis
-    version: "17.x.x"
+    version: "24.1.2"
     repository: https://charts.bitnami.com/bitnami
-    condition: redis.enabled
+    condition: onPrem.redis
+  - name: minio
+    version: "17.0.21"
+    repository: https://charts.bitnami.com/bitnami
+    condition: onPrem.minio

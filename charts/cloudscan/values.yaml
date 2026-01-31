@@ -1,166 +1,534 @@
-# Default values for cloudscan
+# CloudScan Helm Chart - Default Values
+# See https://helm.sh/docs/chart_template_guide/subcharts_and_globals/#global-chart-values
 
-## Global settings
+## =============================================================================
+## Global settings - shared across all services
+## =============================================================================
 global:
-  imageRegistry: docker.io
+  # Image registry for all CloudScan services
+  imageRegistry: "docker.io"
+
+  # Image pull policy for all pods
+  # Allowed values: Always, IfNotPresent, Never
   imagePullPolicy: IfNotPresent
+
+  # Image pull secrets (if registry requires authentication)
   imagePullSecrets: []
+  # Example:
+  #  - name: cloudscan-registry-secret
+
+  # Common image tag used for all CloudScan services
+  # This can be overridden per service
+  imageVersion: "latest"
+
+  # Kubernetes storage class for persistent volumes
   storageClass: ""
 
-## Orchestrator service
-orchestrator:
-  enabled: true
-  replicaCount: 2
-  image:
-    repository: cloudscan-orchestrator
-    tag: "latest"
-    pullPolicy: IfNotPresent
-  resources:
-    requests:
-      cpu: 500m
-      memory: 512Mi
-    limits:
-      cpu: 1000m
-      memory: 1Gi
-  service:
-    type: ClusterIP
-    grpcPort: 9999
-    httpPort: 8081
-  env:
-    - name: DATABASE_URL
-      value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@cloudscan-postgresql:5432/$(POSTGRES_DB)"
-    - name: REDIS_URL
-      value: "redis://:$(REDIS_PASSWORD)@cloudscan-redis-master:6379/0"
-    - name: LOG_LEVEL
-      value: "info"
-  serviceAccount:
-    create: true
-    name: cloudscan-orchestrator
-  rbac:
-    create: true
+  # Node selector for all pods (can be overridden per service)
+  nodeSelector: {}
 
-## UI service
-ui:
-  enabled: true
-  replicaCount: 2
-  image:
-    repository: cloudscan-ui
-    tag: "latest"
-    pullPolicy: IfNotPresent
-  resources:
-    requests:
-      cpu: 100m
-      memory: 128Mi
-    limits:
-      cpu: 200m
-      memory: 256Mi
-  service:
-    type: ClusterIP
-    port: 3000
-  env:
-    - name: API_URL
-      value: "http://cloudscan-api-gateway:8080"
-    - name: WS_URL
-      value: "ws://cloudscan-websocket:9090"
+  # Tolerations for all pods (can be overridden per service)
+  tolerations: []
 
-## Storage service
-storage:
-  enabled: true
-  replicaCount: 2
+  # PostgreSQL shared configuration
+  # All services will use these settings unless overridden
+  postgres:
+    # PostgreSQL host (leave empty to use onPrem postgresql)
+    host: ""
+    # PostgreSQL port
+    port: 5432
+    # PostgreSQL user
+    user: "cloudscan"
+    # PostgreSQL password (should be overridden or use existingSecret)
+    password: "changeme"
+    # SSL mode: disable, allow, prefer, require, verify-ca, verify-full
+    sslmode: "prefer"
+    # Use existing Kubernetes secret for credentials
+    # Secret must have keys: host, port, username, password
+    existingSecret: ""
+
+  # Redis shared configuration
+  redis:
+    # Redis host (leave empty to use onPrem redis)
+    host: ""
+    # Redis port
+    port: 6379
+    # Enable authentication
+    authEnabled: true
+    # Redis password (should be overridden or use passwordSecret)
+    password: "redis123"
+    # Secret containing Redis password (key: password)
+    passwordSecret: ""
+    # Enable TLS for Redis communication
+    secure: false
+    # Verify hostname for TLS
+    verifyHostName: false
+    # CA cert secret for TLS (key: ca.crt)
+    cacertSecret: ""
+
+  # MinIO/S3 shared configuration
+  storage:
+    # Storage type: s3, minio, gcs, azure, local
+    type: "minio"
+    # S3/MinIO configuration
+    s3:
+      # S3 endpoint (leave empty for AWS S3, set for MinIO)
+      endpoint: ""
+      # S3 bucket name
+      bucket: "cloudscan-artifacts"
+      # S3 region
+      region: "us-east-1"
+      # Access key
+      accessKey: ""
+      # Secret key
+      secretKey: ""
+      # Use existing secret (keys: accessKey, secretKey)
+      existingSecret: ""
+    # GCS configuration
+    gcs:
+      bucket: ""
+      projectId: ""
+      # Secret with GCS credentials JSON (key: credentials.json)
+      credentialsSecret: ""
+    # Azure Blob configuration
+    azure:
+      accountName: ""
+      container: ""
+      accountKey: ""
+      # Secret with Azure credentials (key: accountKey)
+      existingSecret: ""
+
+  # Ingress configuration (applies to all services)
+  ingress:
+    # Enable ingress
+    enabled: false
+    # Ingress class name
+    className: "nginx"
+    # Ingress annotations
+    annotations:
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    # Ingress hosts
+    hosts:
+      - host: cloudscan.local
+        paths:
+          - path: /
+            pathType: Prefix
+            service: ui
+            port: 8080
+          - path: /api
+            pathType: Prefix
+            service: apigateway
+            port: 8080
+          - path: /ws
+            pathType: Prefix
+            service: websocket
+            port: 9090
+    # TLS configuration
+    tls: []
+    # Example:
+    # - secretName: cloudscan-tls
+    #   hosts:
+    #     - cloudscan.local
+
+## =============================================================================
+## On-Premise Dependencies - Control which charts to deploy
+## =============================================================================
+onPrem:
+  # Deploy Bitnami PostgreSQL chart
+  postgresql: true
+
+  # Deploy Bitnami Redis chart
+  redis: true
+
+  # Deploy Bitnami MinIO chart
+  minio: true
+
+## =============================================================================
+## PostgreSQL (Bitnami Chart) - Only deployed if onPrem.postgresql=true
+## =============================================================================
+postgresql:
+  # PostgreSQL version
   image:
-    repository: cloudscan-storage
-    tag: "latest"
-    pullPolicy: IfNotPresent
-  service:
-    type: ClusterIP
-    port: 8082
-  resources:
-    requests:
-      cpu: 250m
-      memory: 256Mi
-    limits:
-      cpu: 500m
-      memory: 512Mi
-  # Storage backend configuration
-  storageType: local  # local, s3, gcs, or azure
+    tag: "16.6.0-debian-12-r3"
+
+  # Authentication
+  auth:
+    # PostgreSQL admin username
+    username: "cloudscan"
+    # PostgreSQL admin password (override in production!)
+    password: "changeme"
+    # Default database
+    database: "cloudscan"
+    # Enable PostgreSQL admin user
+    enablePostgresUser: true
+    # Postgres admin password
+    postgresPassword: "postgres"
+
+  # Primary configuration
+  primary:
+    # Persistence configuration
+    persistence:
+      enabled: true
+      size: 50Gi
+      # storageClass: ""
+
+    # Resource requests and limits
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+
+    # PostgreSQL configuration
+    # initdb:
+    #   scripts:
+    #     init.sql: |
+    #       CREATE DATABASE orchestrator;
+    #       CREATE DATABASE ui_backend;
+
+## =============================================================================
+## Redis (Bitnami Chart) - Only deployed if onPrem.redis=true
+## =============================================================================
+redis:
+  # Redis architecture: standalone or replication
+  architecture: standalone
+
+  # Redis version
+  image:
+    tag: "7.4.2-debian-12-r5"
+
+  # Authentication
+  auth:
+    enabled: true
+    password: "redis123"
+
+  # Master configuration
+  master:
+    persistence:
+      enabled: false
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+
+  # Redis configuration
+  commonConfiguration: |-
+    # Save disabled for cache-only use
+    save ""
+    appendonly no
+    # Max memory and eviction policy
+    maxmemory 512mb
+    maxmemory-policy allkeys-lru
+
+## =============================================================================
+## MinIO (Bitnami Chart) - Only deployed if onPrem.minio=true
+## =============================================================================
+minio:
+  # MinIO mode: standalone or distributed
+  mode: standalone
+
+  # MinIO version
+  image:
+    tag: "2025.1.28-debian-12-r1"
+
+  # Authentication
+  auth:
+    rootUser: "admin"
+    rootPassword: "changeme123"
+
+  # Default buckets to create
+  defaultBuckets: "cloudscan-artifacts"
+
+  # Persistence
   persistence:
     enabled: true
     size: 100Gi
-  s3:
-    bucket: ""
-    region: us-west-2
-    endpoint: ""  # Optional: for MinIO/S3-compatible
-    accessKey: ""
-    secretKey: ""
-  gcs:
-    bucket: ""
-    projectId: ""
-    credentialsSecret: ""
-  azure:
-    accountName: ""
-    container: ""
-    accountKey: ""
-  env:
-    - name: STORAGE_TYPE
-      value: "local"
-    - name: LOG_LEVEL
-      value: "info"
 
-## API Gateway
-apiGateway:
+  # Resources
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+  # Ingress for MinIO console
+  ingress:
+    enabled: false
+    hostname: minio.local
+    ingressClassName: nginx
+
+## =============================================================================
+## CloudScan Orchestrator Service
+## =============================================================================
+orchestrator:
+  # Enable orchestrator deployment
+  enabled: true
+
+  # Number of replicas
+  replicaCount: 2
+
+  # Image configuration
+  image:
+    repository: "cloudscan/cloudscan-orchestrator"
+    tag: ""  # Defaults to global.imageVersion
+    pullPolicy: ""  # Defaults to global.imagePullPolicy
+
+  # Service configuration
+  service:
+    type: ClusterIP
+    # gRPC port
+    grpcPort: 9999
+    # HTTP port
+    httpPort: 8081
+    # Metrics port
+    metricsPort: 9090
+    annotations: {}
+
+  # Resource requests and limits
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+
+  # Database configuration (overrides global)
+  postgres:
+    # Database name for orchestrator
+    database: "orchestrator"
+    # These inherit from global.postgres unless overridden:
+    # host: ""
+    # port: 5432
+    # user: ""
+    # password: ""
+    # sslmode: ""
+    # existingSecret: ""
+
+  # Environment variables
+  env: []
+  # Example:
+  # - name: LOG_LEVEL
+  #   value: "info"
+  # - name: GRPC_PORT
+  #   value: "9999"
+
+  # Additional environment variables from secrets/configmaps
+  envFrom: []
+
+  # Node selector
+  nodeSelector: {}
+
+  # Tolerations
+  tolerations: []
+
+  # Affinity
+  affinity: {}
+
+  # Pod annotations
+  podAnnotations: {}
+
+  # Security context
+  podSecurityContext: {}
+  containerSecurityContext: {}
+
+  # Service account
+  serviceAccount:
+    create: true
+    name: "cloudscan-orchestrator"
+    annotations: {}
+
+  # RBAC for creating Kubernetes Jobs
+  rbac:
+    create: true
+    # ClusterRole rules for job management
+    rules:
+      - apiGroups: ["batch"]
+        resources: ["jobs"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      - apiGroups: [""]
+        resources: ["pods", "pods/log"]
+        verbs: ["get", "list", "watch"]
+
+## =============================================================================
+## CloudScan API Gateway
+## =============================================================================
+apigateway:
   enabled: true
   replicaCount: 2
+
   image:
-    repository: cloudscan-api-gateway
-    tag: "latest"
-    pullPolicy: IfNotPresent
+    repository: "cloudscan/cloudscan-apigateway"
+    tag: ""
+    pullPolicy: ""
+
   service:
     type: ClusterIP
     port: 8080
+    annotations: {}
+
   resources:
     requests:
       cpu: 250m
       memory: 256Mi
     limits:
-      cpu: 500m
-      memory: 512Mi
-  env:
-    - name: ORCHESTRATOR_URL
-      value: "cloudscan-orchestrator:9999"
-    - name: LOG_LEVEL
-      value: "info"
+      cpu: 1000m
+      memory: 1Gi
 
-## WebSocket service
+  # JWT configuration
+  jwt:
+    secret: "changeme-jwt-secret-key"
+    # Use existing secret (key: jwt-secret)
+    existingSecret: ""
+    expirationHours: 24
+
+  # Rate limiting
+  rateLimit:
+    enabled: true
+    requestsPerMinute: 60
+
+  env: []
+  envFrom: []
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  podAnnotations: {}
+  podSecurityContext: {}
+  containerSecurityContext: {}
+
+## =============================================================================
+## CloudScan Storage Service
+## =============================================================================
+storage:
+  enabled: true
+  replicaCount: 2
+
+  image:
+    repository: "cloudscan/cloudscan-storage"
+    tag: ""
+    pullPolicy: ""
+
+  service:
+    type: ClusterIP
+    port: 8082
+    annotations: {}
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+  # Storage configuration (inherits from global.storage)
+  # Can be overridden here per service
+  # storageType: "minio"
+
+  env: []
+  envFrom: []
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  podAnnotations: {}
+  podSecurityContext: {}
+  containerSecurityContext: {}
+
+## =============================================================================
+## CloudScan WebSocket Service
+## =============================================================================
 websocket:
   enabled: true
   replicaCount: 2
+
   image:
-    repository: cloudscan-websocket
-    tag: "latest"
-    pullPolicy: IfNotPresent
+    repository: "cloudscan/cloudscan-websocket"
+    tag: ""
+    pullPolicy: ""
+
   service:
     type: ClusterIP
     port: 9090
+    annotations: {}
+
   resources:
     requests:
       cpu: 250m
       memory: 256Mi
     limits:
-      cpu: 500m
-      memory: 512Mi
-  env:
-    - name: REDIS_URL
-      value: "redis://:$(REDIS_PASSWORD)@cloudscan-redis-master:6379/0"
-    - name: LOG_LEVEL
-      value: "info"
+      cpu: 1000m
+      memory: 1Gi
 
-## Runner (Job template)
-runner:
+  env: []
+  envFrom: []
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  podAnnotations: {}
+  podSecurityContext: {}
+  containerSecurityContext: {}
+
+## =============================================================================
+## CloudScan UI Service (Spring Boot + React)
+## =============================================================================
+ui:
   enabled: true
+  replicaCount: 2
+
   image:
-    repository: cloudscan-runner
-    tag: "latest"
-    pullPolicy: IfNotPresent
+    repository: "cloudscan/cloudscan-ui"
+    tag: ""
+    pullPolicy: ""
+
+  service:
+    type: ClusterIP
+    # Spring Boot backend port
+    port: 8080
+    annotations: {}
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+
+  # Database configuration for UI backend (Spring Boot)
+  postgres:
+    database: "ui_backend"
+
+  env: []
+  envFrom: []
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  podAnnotations: {}
+  podSecurityContext: {}
+  containerSecurityContext: {}
+
+## =============================================================================
+## CloudScan Runner (K8s Job Template)
+## =============================================================================
+runner:
+  # Enable runner (controls whether job templates are created)
+  enabled: true
+
+  image:
+    repository: "cloudscan/cloudscan-runner"
+    tag: ""
+    pullPolicy: ""
+
+  # Resource requests and limits for scan jobs
   resources:
     requests:
       cpu: 2000m
@@ -168,101 +536,83 @@ runner:
     limits:
       cpu: 4000m
       memory: 8Gi
+
+  # Job configuration
+  job:
+    # Time to retain completed jobs
+    ttlSecondsAfterFinished: 3600  # 1 hour
+    # Backoff limit for failed jobs
+    backoffLimit: 1
+    # Active deadline seconds
+    activeDeadlineSeconds: 3600  # 1 hour timeout
+
+  # Scanner configuration
   scanners:
+    # SAST - Semgrep
     semgrep:
       enabled: true
+    # SCA - Trivy
     trivy:
       enabled: true
+      # Trivy DB updates
+      dbUpdateEnabled: true
+    # Secrets - TruffleHog
     trufflehog:
       enabled: true
+      # Verify secrets (makes external API calls)
+      verify: false
+    # License - ScanCode
     scancode:
       enabled: true
 
-## PostgreSQL (Bitnami chart)
-postgresql:
-  enabled: true
-  global:
-    imageRegistry: docker.io
-  image:
-    registry: docker.io
-    repository: bitnami/postgresql
-    tag: 15.4.0-debian-11-r0
-  auth:
-    username: cloudscan
-    password: changeme
-    database: cloudscan
-  primary:
-    persistence:
-      enabled: true
-      size: 20Gi
+  env: []
+  envFrom: []
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  podAnnotations: {}
+  podSecurityContext: {}
+  containerSecurityContext: {}
 
-## Redis (Bitnami chart)
-redis:
-  enabled: true
-  image:
-    registry: docker.io
-    repository: bitnami/redis
-    tag: 7.0.12-debian-11-r34
-  auth:
-    enabled: true
-    password: redis123
-  master:
-    persistence:
-      enabled: false
-    resources:
-      requests:
-        cpu: 100m
-        memory: 128Mi
-      limits:
-        cpu: 200m
-        memory: 256Mi
+  # Service account for runners
+  serviceAccount:
+    create: true
+    name: "cloudscan-runner"
+    annotations: {}
 
-## Ingress
-ingress:
-  enabled: true
-  className: nginx
-  annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-prod
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
-  hosts:
-    - host: cloudscan.example.com
-      paths:
-        - path: /
-          pathType: Prefix
-          backend:
-            service:
-              name: cloudscan-ui
-              port: 3000
-        - path: /api
-          pathType: Prefix
-          backend:
-            service:
-              name: cloudscan-api-gateway
-              port: 8080
-        - path: /ws
-          pathType: Prefix
-          backend:
-            service:
-              name: cloudscan-websocket
-              port: 9090
-  tls:
-    - secretName: cloudscan-tls
-      hosts:
-        - cloudscan.example.com
-
-## Service Account
+## =============================================================================
+## ServiceAccount (Global)
+## =============================================================================
 serviceAccount:
+  # Create a service account
   create: true
+  # Service account name
   name: ""
+  # Annotations
   annotations: {}
 
-## RBAC
+## =============================================================================
+## RBAC (Global)
+## =============================================================================
 rbac:
+  # Create RBAC resources
   create: true
 
-## Monitoring
+## =============================================================================
+## Monitoring & Observability
+## =============================================================================
 monitoring:
+  # Enable Prometheus metrics
   enabled: true
+
+  # ServiceMonitor (requires Prometheus Operator)
   serviceMonitor:
-    enabled: false  # Requires Prometheus Operator
+    enabled: false
+    interval: 30s
+    scrapeTimeout: 10s
+
+  # Grafana dashboards
+  grafana:
+    enabled: false
+    # Dashboard ConfigMaps
+    dashboards: {}

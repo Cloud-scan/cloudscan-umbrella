@@ -72,22 +72,25 @@ A **fully open-source, self-hosted** platform that provides:
 ┌─────────────┐   ┌──────────────────┐   ┌─────────────────────┐
 │  UI Service │   │  API Gateway     │   │  WebSocket Service  │
 │  (React)    │   │  (Go - Echo)     │   │  (Go - Gorilla WS)  │
-│             │   │                  │   │                     │
-│  Port: 3000 │   │  Port: 8080      │   │  Port: 9090         │
-└─────────────┘   └────────┬─────────┘   └──────────┬──────────┘
+│             │   │  - REST/gRPC     │   │  - Live logs        │
+│  Port: 3000 │   │  - Auth/RBAC     │   │  - Status updates   │
+└─────────────┘   │  Port: 8080      │   │  Port: 9090         │
+                  └────────┬─────────┘   └──────────┬──────────┘
                            │                        │
-                           ▼                        ▼
-                  ┌──────────────────────────────────────────┐
-                  │     Scan Orchestrator Service (Go)       │
-                  │     - Job creation & lifecycle mgmt      │
-                  │     - Kubernetes job dispatcher          │
-                  │     - Multi-tenant isolation             │
-                  │     - gRPC + HTTP APIs                   │
-                  │     - Background workers (sweeper, etc)  │
-                  │     Port: 9999 (gRPC), 8081 (HTTP)       │
-                  └────┬──────────────────┬──────────────────┘
-                       │                  │
-                       ▼                  ▼
+                           │                        │ Stream logs
+                           ▼                        │ from K8s
+                  ┌──────────────────────────────────────────────┐
+                  │     Scan Orchestrator Service (Go)           │
+                  │     - Job creation & lifecycle mgmt          │
+                  │     - Kubernetes job dispatcher              │
+                  │     - Multi-tenant isolation                 │
+                  │     - gRPC APIs                              │
+                  │     - Background workers (sweeper, etc)      │
+                  │     Port: 9999 (gRPC), 8081 (HTTP)           │
+                  └────┬──────────────────┬────────────────┬─────┘
+                       │                  │                │
+                       │                  │                │
+                       ▼                  ▼                ▼
             ┌──────────────────┐   ┌─────────────────────┐
             │  Storage Service │   │  Kubernetes Cluster │
             │  (Go)            │   │  (Job Execution)    │
@@ -95,56 +98,60 @@ A **fully open-source, self-hosted** platform that provides:
             │  - Presigned URLs│   └──────────┬──────────┘
             │  - Multi-cloud   │              │
             │  Port: 8082      │              │
-            └────────┬─────────┘              │
-                     │                        ▼
+            └────────┬─────────┘              ▼
                      │              ┌──────────────────────┐
                      │              │   Scanner Runners    │
                      │              │   (K8s Jobs/Pods)    │
                      │              │                      │
                      │              │  ┌────────────────┐  │
                      │              │  │  SAST Runner   │  │
-                     │              │  │  (Semgrep,     │  │
-                     │              │  │   CodeQL, etc) │  │
+                     │              │  │  (Semgrep)     │  │
                      │              │  └────────────────┘  │
                      │              │                      │
                      │              │  ┌────────────────┐  │
                      │              │  │  SCA Runner    │  │
-                     │              │  │  (OWASP Dep,   │  │
-                     │              │  │   Trivy, etc)  │  │
+                     │              │  │  (Trivy)       │  │
                      │              │  └────────────────┘  │
                      │              │                      │
                      │              │  ┌────────────────┐  │
                      │              │  │ Secrets Runner │  │
-                     │              │  │ (TruffleHog,   │  │
-                     │              │  │  GitLeaks)     │  │
+                     │              │  │ (TruffleHog)   │  │
                      │              │  └────────────────┘  │
-                     │              └──────────────────────┘
-                     │                        │
-                     ▼                        │
-          ┌─────────────────────┐            │
-          │   PostgreSQL        │◄───────────┘
-          │   (Multi-tenant DB) │
-          │   - Scans metadata  │
-          │   - Findings        │
-          │   - Users/Projects  │
-          │   - Partitioned     │
-          └─────────────────────┘
-                     │
-                     ▼
-          ┌─────────────────────┐
-          │   Redis (Optional)  │
-          │   - Caching         │
-          │   - Job queue       │
-          │   - Rate limiting   │
-          └─────────────────────┘
-                     │
-                     ▼
-          ┌─────────────────────┐
-          │  Prometheus +       │
-          │  Grafana            │
-          │  (Metrics &         │
-          │   Dashboards)       │
-          └─────────────────────┘
+                     │              │                      │
+                     │              │  ┌────────────────┐  │
+                     │              │  │License Runner  │  │
+                     │              │  │ (ScanCode)     │  │
+                     │              │  └────────────────┘  │
+                     │              └──────────┬───────────┘
+                     │                         │
+                     ▼                         ▼
+          ┌─────────────────────┐   ┌─────────────────────┐
+          │   S3/MinIO/GCS      │   │   PostgreSQL        │
+          │   (Object Store)    │   │   (Multi-tenant DB) │
+          │   - Source code     │   │   - Scans metadata  │
+          │   - Artifacts       │   │   - Findings        │
+          │   - Results         │   │   - Users/Projects  │
+          └─────────────────────┘   │   - Artifacts meta  │
+                                    └─────────────────────┘
+                                               │
+                                               ▼
+                                    ┌─────────────────────┐
+                                    │   Redis (Optional)  │
+                                    │   - Caching         │
+                                    │   - Job queue       │
+                                    │   - Rate limiting   │
+                                    └─────────────────────┘
+
+**Key Flow:**
+1. UI → API Gateway → Storage Service: CreateArtifact() → presigned upload URL
+2. UI → S3: Upload source code directly using presigned URL
+3. UI → API Gateway → Orchestrator: CreateScan(artifact_id)
+4. Orchestrator → Storage Service: GetArtifact(artifact_id) → presigned download URL
+5. Orchestrator → K8s: Create Job with SOURCE_DOWNLOAD_URL env var
+6. Runner → S3: Download source using presigned URL (direct, no service call)
+7. Runner: Execute scanners in parallel (Semgrep, Trivy, TruffleHog, ScanCode)
+8. Runner → Orchestrator: CreateFindings() and UpdateScan() via gRPC
+9. WebSocket Service → K8s API: Stream pod logs to UI in real-time
 ```
 
 ---
@@ -664,15 +671,18 @@ resources:
 
 **Runner Flow:**
 ```go
-1. Receive job via K8s Job spec
-2. Call storage-service to get source code download URL
-3. Download and extract source code
-4. Run appropriate scanner(s)
-5. Parse scanner output to standard format (SARIF)
-6. Upload results to storage-service
-7. Call orchestrator via gRPC to update findings in DB
-8. Update scan status to completed/failed
+1. Receive job via K8s Job spec (env vars from orchestrator)
+2. Read SOURCE_DOWNLOAD_URL from environment variable
+3. Download source code directly from S3 using presigned URL
+4. Extract source code to /workspace
+5. Run appropriate scanner(s) in parallel (Semgrep, Trivy, etc.)
+6. Parse scanner output to standard format (SARIF)
+7. Call orchestrator.CreateFindings() via gRPC to save findings
+8. Call orchestrator.UpdateScan() to mark completed/failed
 9. Exit (K8s cleans up pod)
+
+Note: Runner only communicates with Orchestrator (gRPC) and S3 (presigned URLs).
+It does NOT call storage-service directly.
 ```
 
 ---
@@ -921,17 +931,52 @@ Advanced Options:
 
 **User clicks "Start Scan"**
 
-**UI calls:**
+**Step 1: UI fetches/clones source code locally**
+```javascript
+// UI clones git repository in browser using git libraries
+// or user uploads source code as ZIP
+const sourceArchive = await prepareSourceCode({
+  repository: "https://github.com/acme/payment-service",
+  branch: "main",
+  commit: "abc123def"
+});
+```
+
+**Step 2: UI uploads source to Storage Service**
+```javascript
+// Create artifact and get presigned upload URL
+POST /storage/v1/artifacts
+{
+  "scan_id": "",  // Empty for now, will be set later
+  "organization_id": "org-7c9e6679",
+  "type": "source",
+  "filename": "payment-service-main-abc123.zip",
+  "content_type": "application/zip",
+  "size_bytes": 12458352
+}
+
+Response:
+{
+  "artifact_id": "art-1a2b3c4d-5678-90ef-ghij-klmnopqrstuv",
+  "upload_url": "https://s3.amazonaws.com/cloudscan-storage/art-1a2b.../...",
+  "expires_at": "2025-10-08T11:15:30Z"
+}
+
+// Upload source archive directly to S3 using presigned URL
+PUT https://s3.amazonaws.com/cloudscan-storage/art-1a2b.../...
+Content-Type: application/zip
+Body: <binary source archive>
+```
+
+**Step 3: UI creates scan with artifact_id**
 ```javascript
 POST /api/v1/scans
 {
   "project_id": "proj-9f8e7d6c",
-  "source": {
-    "type": "git",
-    "repository": "https://github.com/acme/payment-service",
-    "branch": "main",
-    "commit_sha": ""
-  },
+  "source_artifact_id": "art-1a2b3c4d-5678-90ef-ghij-klmnopqrstuv",
+  "git_url": "https://github.com/acme/payment-service",
+  "git_branch": "main",
+  "git_commit": "abc123def",
   "scan_types": ["sast", "sca", "secrets", "license"],
   "priority": "normal",
   "fail_threshold": "critical",
@@ -949,6 +994,13 @@ Response:
   "dashboard_url": "/scans/scan-890a1234-5678-9012-3456-7890abcdef12"
 }
 ```
+
+**Behind the scenes:**
+1. Orchestrator receives CreateScan request with artifact_id
+2. Orchestrator calls Storage.GetArtifact(artifact_id) → gets presigned download URL
+3. Orchestrator creates K8s Job with SOURCE_DOWNLOAD_URL env var
+4. Runner downloads source from S3 using presigned URL
+5. Runner executes scanners and sends results back to Orchestrator
 
 **UI redirects to:** `/scans/scan-890a1234-5678-9012-3456-7890abcdef12`
 

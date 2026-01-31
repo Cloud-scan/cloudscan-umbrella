@@ -207,3 +207,201 @@ ServiceAccount name
 {{ default "default" .Values.serviceAccount.name }}
 {{- end -}}
 {{- end -}}
+
+{{/*
+=============================================================================
+Service-Specific Fullnames and Labels
+=============================================================================
+*/}}
+
+{{/*
+Orchestrator fullname
+*/}}
+{{- define "cloudscan.orchestrator.fullname" -}}
+{{- printf "%s-orchestrator" (include "cloudscan.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{- define "cloudscan.orchestrator.labels" -}}
+{{ include "cloudscan.labels" . }}
+app.kubernetes.io/component: orchestrator
+{{- end -}}
+
+{{- define "cloudscan.orchestrator.selectorLabels" -}}
+{{ include "cloudscan.selectorLabels" . }}
+app.kubernetes.io/component: orchestrator
+{{- end -}}
+
+{{/*
+API Gateway fullname
+*/}}
+{{- define "cloudscan.apigateway.fullname" -}}
+{{- printf "%s-apigateway" (include "cloudscan.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{- define "cloudscan.apigateway.labels" -}}
+{{ include "cloudscan.labels" . }}
+app.kubernetes.io/component: apigateway
+{{- end -}}
+
+{{- define "cloudscan.apigateway.selectorLabels" -}}
+{{ include "cloudscan.selectorLabels" . }}
+app.kubernetes.io/component: apigateway
+{{- end -}}
+
+{{/*
+Storage fullname
+*/}}
+{{- define "cloudscan.storage.fullname" -}}
+{{- printf "%s-storage" (include "cloudscan.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{- define "cloudscan.storage.labels" -}}
+{{ include "cloudscan.labels" . }}
+app.kubernetes.io/component: storage
+{{- end -}}
+
+{{- define "cloudscan.storage.selectorLabels" -}}
+{{ include "cloudscan.selectorLabels" . }}
+app.kubernetes.io/component: storage
+{{- end -}}
+
+{{/*
+WebSocket fullname
+*/}}
+{{- define "cloudscan.websocket.fullname" -}}
+{{- printf "%s-websocket" (include "cloudscan.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{- define "cloudscan.websocket.labels" -}}
+{{ include "cloudscan.labels" . }}
+app.kubernetes.io/component: websocket
+{{- end -}}
+
+{{- define "cloudscan.websocket.selectorLabels" -}}
+{{ include "cloudscan.selectorLabels" . }}
+app.kubernetes.io/component: websocket
+{{- end -}}
+
+{{/*
+UI fullname
+*/}}
+{{- define "cloudscan.ui.fullname" -}}
+{{- printf "%s-ui" (include "cloudscan.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{- define "cloudscan.ui.labels" -}}
+{{ include "cloudscan.labels" . }}
+app.kubernetes.io/component: ui
+{{- end -}}
+
+{{- define "cloudscan.ui.selectorLabels" -}}
+{{ include "cloudscan.selectorLabels" . }}
+app.kubernetes.io/component: ui
+{{- end -}}
+
+{{/*
+Runner fullname
+*/}}
+{{- define "cloudscan.runner.fullname" -}}
+{{- printf "%s-runner" (include "cloudscan.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{- define "cloudscan.runner.labels" -}}
+{{ include "cloudscan.labels" . }}
+app.kubernetes.io/component: runner
+{{- end -}}
+
+{{- define "cloudscan.runner.selectorLabels" -}}
+{{ include "cloudscan.selectorLabels" . }}
+app.kubernetes.io/component: runner
+{{- end -}}
+
+{{/*
+=============================================================================
+PostgreSQL Helpers (Enhanced)
+=============================================================================
+*/}}
+
+{{/*
+PostgreSQL host - returns onPrem postgresql host or external host
+*/}}
+{{- define "cloudscan.postgres.host" -}}
+{{- if .Values.onPrem.postgresql -}}
+{{- printf "%s-postgresql" (include "cloudscan.fullname" .) -}}
+{{- else -}}
+{{- .Values.global.postgres.host | required "global.postgres.host is required when onPrem.postgresql=false" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+PostgreSQL secret name
+*/}}
+{{- define "cloudscan.postgres.secretName" -}}
+{{- if .Values.global.postgres.existingSecret -}}
+{{- .Values.global.postgres.existingSecret -}}
+{{- else if .Values.onPrem.postgresql -}}
+{{- printf "%s-postgresql" (include "cloudscan.fullname" .) -}}
+{{- else -}}
+{{- printf "%s-postgres-secret" (include "cloudscan.fullname" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+=============================================================================
+Redis Helpers (Enhanced)
+=============================================================================
+*/}}
+
+{{/*
+Redis host
+*/}}
+{{- define "cloudscan.redis.host" -}}
+{{- if .Values.onPrem.redis -}}
+{{- printf "%s-redis-master" (include "cloudscan.fullname" .) -}}
+{{- else -}}
+{{- .Values.global.redis.host | required "global.redis.host is required when onPrem.redis=false" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Redis secret name
+*/}}
+{{- define "cloudscan.redis.secretName" -}}
+{{- if .Values.global.redis.passwordSecret -}}
+{{- .Values.global.redis.passwordSecret -}}
+{{- else if .Values.onPrem.redis -}}
+{{- printf "%s-redis" (include "cloudscan.fullname" .) -}}
+{{- else -}}
+{{- printf "%s-redis-secret" (include "cloudscan.fullname" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+=============================================================================
+MinIO/S3 Storage Helpers
+=============================================================================
+*/}}
+
+{{/*
+MinIO endpoint URL
+*/}}
+{{- define "cloudscan.minio.endpoint" -}}
+{{- if .Values.onPrem.minio -}}
+{{- printf "http://%s-minio:9000" (include "cloudscan.fullname" .) -}}
+{{- else -}}
+{{- .Values.global.storage.s3.endpoint -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Storage secret name
+*/}}
+{{- define "cloudscan.storage.secretName" -}}
+{{- if .Values.global.storage.s3.existingSecret -}}
+{{- .Values.global.storage.s3.existingSecret -}}
+{{- else if .Values.onPrem.minio -}}
+{{- printf "%s-minio" (include "cloudscan.fullname" .) -}}
+{{- else -}}
+{{- printf "%s-storage-secret" (include "cloudscan.fullname" .) -}}
+{{- end -}}
+{{- end -}}
