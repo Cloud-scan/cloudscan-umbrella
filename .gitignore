@@ -4,38 +4,3 @@
 *.dll
 *.so
 *.dylib
-
-# Go
-vendor/
-*.test
-*.out
-go.work
-
-# Node
-node_modules/
-dist/
-build/
-.next/
-*.log
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Environment
-.env
-.env.local
-*.local.yaml
-
-# Kubernetes
-*.kubeconfig
-
-# Build
-bin/
-tmp/
