@@ -97,8 +97,6 @@ global:
       accountKey: ""
       # Secret with Azure credentials (key: accountKey)
       existingSecret: ""
-    persistence:
-      enabled: true
 
   # Ingress configuration (applies to all services)
   ingress:
@@ -364,7 +362,7 @@ orchestrator:
 ## =============================================================================
 ## CloudScan API Gateway
 ## =============================================================================
-apigateway:
+apiGateway:
   enabled: true
   replicaCount: 2
 
@@ -424,6 +422,16 @@ storage:
     port: 8082
     annotations: {}
 
+  # Persistence configuration (only used when storageType is "local")
+  persistence:
+    enabled: false
+    storageClass: ""
+    size: 10Gi
+
+  # Storage type configuration (inherits from global.storage.type)
+  # Options: s3, minio, gcs, azure, local
+  storageType: ""
+
   resources:
     requests:
       cpu: 250m
@@ -431,10 +439,6 @@ storage:
     limits:
       cpu: 1000m
       memory: 1Gi
-
-  # Storage configuration (inherits from global.storage)
-  # Can be overridden here per service
-  # storageType: "minio"
 
   env: []
   envFrom: []
@@ -599,6 +603,47 @@ serviceAccount:
 rbac:
   # Create RBAC resources
   create: true
+
+## =============================================================================
+## Ingress Configuration
+## =============================================================================
+ingress:
+  # Enable ingress
+  enabled: false
+  # Ingress class name
+  className: "nginx"
+  # Ingress annotations
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+  # Ingress hosts
+  hosts:
+    - host: cloudscan.local
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: ""  # Uses default service name
+              port: 8080
+        - path: /api
+          pathType: Prefix
+          backend:
+            service:
+              name: ""  # Uses apigateway service
+              port: 8080
+        - path: /ws
+          pathType: Prefix
+          backend:
+            service:
+              name: ""  # Uses websocket service
+              port: 9090
+  # TLS configuration
+  tls: []
+  # Example:
+  # - secretName: cloudscan-tls
+  #   hosts:
+  #     - cloudscan.local
 
 ## =============================================================================
 ## Monitoring & Observability

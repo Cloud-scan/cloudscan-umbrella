@@ -4,6 +4,7 @@ description: CloudScan - Open Source Security & Quality Scanning Platform
 type: application
 version: 1.0.0
 appVersion: "1.0.0"
+icon: https://raw.githubusercontent.com/cloudscan/cloudscan/main/assets/logo.svg
 keywords:
   - security
   - sast
