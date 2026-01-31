@@ -125,7 +125,7 @@ jobs:
             --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
 
           git add packages index.yaml
-          git commit -m "Publish  ${{ env.CHART_NAME }} chart version ${VERSION}" || echo "No changes"
+          git commit -m "Publish ${{ env.CHART_NAME }} chart version ${VERSION}" || echo "No changes"
 
           git push origin gh-pages --force-with-lease
 
