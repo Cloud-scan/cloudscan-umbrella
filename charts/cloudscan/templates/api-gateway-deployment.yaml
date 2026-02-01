@@ -23,6 +23,21 @@ spec:
       {{- end }}
       securityContext:
         {{- include "cloudscan.podSecurityContext" . | nindent 8 }}
+      initContainers:
+        # Wait for PostgreSQL to be ready
+        {{- include "cloudscan.initContainer.waitForPostgres" . | nindent 8 }}
+        {{- if or .Values.onPrem.redis .Values.global.redis.host }}
+        # Wait for Redis to be ready
+        {{- include "cloudscan.initContainer.waitForRedis" . | nindent 8 }}
+        {{- end }}
+        {{- if .Values.orchestrator.enabled }}
+        # Wait for Orchestrator gRPC service to be ready
+        {{- include "cloudscan.initContainer.waitForService" (dict "name" "orchestrator" "host" (printf "%s-orchestrator" (include "cloudscan.fullname" .)) "port" (.Values.orchestrator.service.grpcPort | default 9999)) | nindent 8 }}
+        {{- end }}
+        {{- if .Values.storage.enabled }}
+        # Wait for Storage gRPC service to be ready
+        {{- include "cloudscan.initContainer.waitForService" (dict "name" "storage" "host" (printf "%s-storage" (include "cloudscan.fullname" .)) "port" (.Values.storage.service.grpcPort | default 9998)) | nindent 8 }}
+        {{- end }}
       containers:
       - name: api-gateway
         image: {{ printf "%s/%s:%s" (.Values.apiGateway.image.registry | default .Values.global.imageRegistry | default "docker.io") .Values.apiGateway.image.repository (.Values.apiGateway.image.tag | default "latest") }}
@@ -58,7 +73,7 @@ spec:
           - name: DB_NAME
             value: {{ .Values.apiGateway.postgres.database | default "cloudscan_gateway" | quote }}
           - name: DB_SSLMODE
-            value: {{ .Values.global.postgres.sslmode | default "prefer" | quote }}
+            value: {{ .Values.global.postgres.sslmode | default "disable" | quote }}
           - name: DB_MAX_CONNECTIONS
             value: {{ .Values.apiGateway.postgres.maxConns | default "25" | quote }}
           - name: DB_MIN_CONNECTIONS

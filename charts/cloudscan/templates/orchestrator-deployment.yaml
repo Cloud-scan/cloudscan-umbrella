@@ -24,6 +24,13 @@ spec:
       serviceAccountName: {{ .Values.orchestrator.serviceAccount.name | default "cloudscan-orchestrator" }}
       securityContext:
         {{- include "cloudscan.podSecurityContext" . | nindent 8 }}
+      initContainers:
+        # Wait for PostgreSQL to be ready
+        {{- include "cloudscan.initContainer.waitForPostgres" . | nindent 8 }}
+        {{- if .Values.storage.enabled }}
+        # Wait for Storage gRPC service to be ready
+        {{- include "cloudscan.initContainer.waitForService" (dict "name" "storage" "host" (printf "%s-storage" (include "cloudscan.fullname" .)) "port" (.Values.storage.service.grpcPort | default 9998)) | nindent 8 }}
+        {{- end }}
       containers:
       - name: orchestrator
         image: {{ printf "%s/%s:%s" (.Values.orchestrator.image.registry | default .Values.global.imageRegistry | default "docker.io") .Values.orchestrator.image.repository (.Values.orchestrator.image.tag | default "latest") }}
@@ -66,7 +73,7 @@ spec:
           - name: DB_NAME
             value: {{ .Values.orchestrator.postgres.database | default "orchestrator" | quote }}
           - name: DB_SSLMODE
-            value: {{ .Values.global.postgres.sslmode | default "prefer" | quote }}
+            value: {{ .Values.global.postgres.sslmode | default "disable" | quote }}
           - name: DB_MAX_CONNS
             value: {{ .Values.orchestrator.postgres.maxConns | default "25" | quote }}
           - name: DB_MIN_CONNS

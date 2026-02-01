@@ -23,6 +23,11 @@ spec:
       {{- end }}
       securityContext:
         {{- include "cloudscan.podSecurityContext" . | nindent 8 }}
+      initContainers:
+        {{- if or .Values.onPrem.redis .Values.global.redis.host }}
+        # Wait for Redis to be ready (for pub/sub)
+        {{- include "cloudscan.initContainer.waitForRedis" . | nindent 8 }}
+        {{- end }}
       containers:
       - name: websocket
         image: {{ printf "%s/%s:%s" (.Values.websocket.image.registry | default .Values.global.imageRegistry | default "docker.io") .Values.websocket.image.repository (.Values.websocket.image.tag | default "latest") }}

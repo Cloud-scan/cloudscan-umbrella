@@ -29,7 +29,8 @@ export REDIS_TLS_ENABLED=${REDIS_TLS_ENABLED:-"false"}
 export MINIO_ENABLED=${MINIO_ENABLED:-"true"}
 export MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-"admin"}
 export MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-"changeme123"}
-export MINIO_ENDPOINT=${MINIO_ENDPOINT:-"http://cloudscan-minio:9000"}
+# NOTE: MinIO endpoint should be hostname:port only (NO http:// or https://)
+export MINIO_ENDPOINT=${MINIO_ENDPOINT:-"cloudscan-minio:9000"}
 
 # S3/Storage settings
 export STORAGE_TYPE=${STORAGE_TYPE:-"minio"}  # local, s3, minio, gcs, azure

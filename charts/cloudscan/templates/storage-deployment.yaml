@@ -23,6 +23,11 @@ spec:
       {{- end }}
       securityContext:
         {{- include "cloudscan.podSecurityContext" . | nindent 8 }}
+      initContainers:
+        # Wait for PostgreSQL to be ready
+        {{- include "cloudscan.initContainer.waitForPostgres" . | nindent 8 }}
+        # Wait for MinIO to be ready (if using MinIO storage)
+        {{- include "cloudscan.initContainer.waitForMinio" . | nindent 8 }}
       containers:
       - name: storage
         image: {{ printf "%s/%s:%s" (.Values.storage.image.registry | default .Values.global.imageRegistry | default "docker.io") .Values.storage.image.repository (.Values.storage.image.tag | default "latest") }}
@@ -63,7 +68,7 @@ spec:
           - name: DB_NAME
             value: {{ .Values.storage.postgres.database | default "storage" | quote }}
           - name: DB_SSLMODE
-            value: {{ .Values.global.postgres.sslmode | default "prefer" | quote }}
+            value: {{ .Values.global.postgres.sslmode | default "disable" | quote }}
           - name: DB_MAX_CONNECTIONS
             value: {{ .Values.storage.postgres.maxConns | default "25" | quote }}
           - name: DB_MIN_CONNECTIONS

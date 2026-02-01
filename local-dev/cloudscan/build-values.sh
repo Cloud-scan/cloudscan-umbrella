@@ -10,7 +10,8 @@ VALUES_FILE="generated-values.yaml"
 
 cat > "$VALUES_FILE" <<EOF
 global:
-  imageRegistry: ${DOCKER_REGISTRY}
+  # DO NOT set imageRegistry globally - it affects Bitnami charts
+  # Set registry per-service instead
   imagePullPolicy: Always
   imageVersion: latest
   storageClass: standard
@@ -23,7 +24,7 @@ global:
     port: 5432
     user: ${POSTGRES_USER}
     password: ${POSTGRES_PASSWORD}
-    sslmode: prefer
+    sslmode: disable
 
   # Redis configuration
   redis:
@@ -37,7 +38,7 @@ global:
   storage:
     type: ${STORAGE_TYPE}
     s3:
-      endpoint: ${MINIO_ENDPOINT:-http://cloudscan-minio:9000}
+      endpoint: ${MINIO_ENDPOINT:-cloudscan-minio:9000}
       bucket: ${S3_BUCKET:-cloudscan-artifacts}
       region: ${S3_REGION:-us-east-1}
       accessKey: ${MINIO_ACCESS_KEY:-admin}
@@ -58,9 +59,25 @@ postgresql:
 redis:
   enabled: ${REDIS_ENABLED}
   image:
-    registry: docker.io
-    repository: bitnami/redis
-    tag: latest
+    registry: registry-1.docker.io
+    repository: bitnamilegacy/redis
+    tag: "8.2.1-debian-12-r0"
+  sentinel:
+    image:
+      registry: registry-1.docker.io
+      repository: bitnamilegacy/redis-sentinel
+      tag: "8.2.1-debian-12-r0"
+  metrics:
+    enabled: true
+    image:
+      registry: registry-1.docker.io
+      repository: bitnamilegacy/redis-exporter
+      tag: "1.76.0-debian-12-r0"
+  volumePermissions:
+    image:
+      registry: registry-1.docker.io
+      repository: bitnamilegacy/os-shell
+      tag: "12-debian-12-r51"
   auth:
     enabled: true
     password: ${REDIS_PASSWORD}
@@ -74,6 +91,25 @@ redis:
 minio:
   enabled: ${MINIO_ENABLED:-true}
   mode: standalone
+  image:
+    registry: registry-1.docker.io
+    repository: bitnamilegacy/minio
+    tag: "2025.7.23-debian-12-r3"
+  clientImage:
+    registry: registry-1.docker.io
+    repository: bitnamilegacy/minio-client
+    tag: "2025.7.21-debian-12-r2"
+  defaultInitContainers:
+    volumePermissions:
+      image:
+        registry: registry-1.docker.io
+        repository: bitnamilegacy/os-shell
+        tag: "12-debian-12-r51"
+  console:
+    image:
+      registry: registry-1.docker.io
+      repository: bitnamilegacy/minio-object-browser
+      tag: "2.0.2-debian-12-r3"
   auth:
     rootUser: ${MINIO_ACCESS_KEY:-admin}
     rootPassword: ${MINIO_SECRET_KEY:-changeme123}
@@ -85,6 +121,7 @@ minio:
 orchestrator:
   enabled: ${CLOUDSCAN_ORCHESTRATOR_ENABLED}
   image:
+    registry: ${DOCKER_REGISTRY}
     repository: cloudscan-orchestrator
     tag: latest
     pullPolicy: Always
@@ -107,7 +144,8 @@ orchestrator:
 apiGateway:
   enabled: ${CLOUDSCAN_API_GATEWAY_ENABLED}
   image:
-    repository: cloudscan-apigateway
+    registry: ${DOCKER_REGISTRY}
+    repository: cloudscan-api-gateway
     tag: latest
     pullPolicy: Always
   replicaCount: 1
@@ -144,6 +182,7 @@ apiGateway:
 storage:
   enabled: ${CLOUDSCAN_STORAGE_ENABLED}
   image:
+    registry: ${DOCKER_REGISTRY}
     repository: cloudscan-storage
     tag: latest
     pullPolicy: Always
@@ -168,6 +207,7 @@ storage:
 websocket:
   enabled: ${CLOUDSCAN_WEBSOCKET_ENABLED}
   image:
+    registry: ${DOCKER_REGISTRY}
     repository: cloudscan-websocket
     tag: latest
     pullPolicy: Always
@@ -188,6 +228,7 @@ websocket:
 ui:
   enabled: ${CLOUDSCAN_UI_ENABLED}
   image:
+    registry: ${DOCKER_REGISTRY}
     repository: cloudscan-ui
     tag: latest
     pullPolicy: Always
@@ -208,6 +249,7 @@ ui:
 runner:
   enabled: ${CLOUDSCAN_RUNNER_ENABLED}
   image:
+    registry: ${DOCKER_REGISTRY}
     repository: cloudscan-runner
     tag: latest
     pullPolicy: Always

@@ -63,9 +63,9 @@ spec:
           - name: DB_NAME
             value: {{ .Values.ui.postgres.database | default "ui_backend" | quote }}
           - name: DB_SSLMODE
-            value: {{ .Values.global.postgres.sslmode | default "prefer" | quote }}
+            value: {{ .Values.global.postgres.sslmode | default "disable" | quote }}
           - name: SPRING_DATASOURCE_URL
-            value: jdbc:postgresql://{{ include "cloudscan.postgres.host" . }}:{{ .Values.global.postgres.port | default "5432" }}/{{ .Values.ui.postgres.database | default "ui_backend" }}?sslmode={{ .Values.global.postgres.sslmode | default "prefer" }}
+            value: jdbc:postgresql://{{ include "cloudscan.postgres.host" . }}:{{ .Values.global.postgres.port | default "5432" }}/{{ .Values.ui.postgres.database | default "ui_backend" }}?sslmode={{ .Values.global.postgres.sslmode | default "disable" }}
           - name: SPRING_DATASOURCE_USERNAME
             value: {{ .Values.global.postgres.user | default "cloudscan" | quote }}
           - name: SPRING_DATASOURCE_PASSWORD

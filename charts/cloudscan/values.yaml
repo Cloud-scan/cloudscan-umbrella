@@ -48,7 +48,7 @@ global:
     # PostgreSQL password (should be overridden or use existingSecret)
     password: "changeme"
     # SSL mode: disable, allow, prefer, require, verify-ca, verify-full
-    sslmode: "prefer"
+    sslmode: "disable"
     # Use existing Kubernetes secret for credentials
     # Secret must have keys: host, port, username, password
     existingSecret: ""
@@ -78,7 +78,9 @@ global:
     type: "minio"
     # S3/MinIO configuration
     s3:
-      # S3 endpoint (leave empty for AWS S3, set for MinIO)
+      # S3 endpoint (hostname:port only - NO http:// or https://)
+      # Leave empty for AWS S3, set to "hostname:port" for MinIO
+      # Example: "cloudscan-minio:9000" or "minio.example.com:9000"
       endpoint: ""
       # S3 bucket name
       bucket: "cloudscan-artifacts"
@@ -204,9 +206,33 @@ redis:
   # Redis architecture: standalone or replication
   architecture: standalone
 
-  # Redis version
+  # Redis Bitnami Legacy images - Aug 22nd, 2025
   image:
-    tag: "7.4.2-debian-12-r5"
+    registry: registry-1.docker.io
+    repository: bitnamilegacy/redis
+    tag: "8.2.1-debian-12-r0"
+
+  # Redis Sentinel - Aug 19th, 2025
+  sentinel:
+    image:
+      registry: registry-1.docker.io
+      repository: bitnamilegacy/redis-sentinel
+      tag: "8.2.1-debian-12-r0"
+
+  # Redis Exporter for metrics - Aug 24th, 2025
+  metrics:
+    enabled: true
+    image:
+      registry: registry-1.docker.io
+      repository: bitnamilegacy/redis-exporter
+      tag: "1.76.0-debian-12-r0"
+
+  # Volume Permissions - Aug 19th, 2025
+  volumePermissions:
+    image:
+      registry: registry-1.docker.io
+      repository: bitnamilegacy/os-shell
+      tag: "12-debian-12-r51"
 
   # Authentication
   auth:
@@ -242,9 +268,32 @@ minio:
   # MinIO mode: standalone or distributed
   mode: standalone
 
-  # MinIO version
+  # MinIO Server - July 23rd, 2025 (Bitnami Legacy)
   image:
-    tag: "2025.1.28-debian-12-r1"
+    registry: registry-1.docker.io
+    repository: bitnamilegacy/minio
+    tag: "2025.7.23-debian-12-r3"
+
+  # MinIO Client - July 21st, 2025 (Bitnami Legacy)
+  clientImage:
+    registry: registry-1.docker.io
+    repository: bitnamilegacy/minio-client
+    tag: "2025.7.21-debian-12-r2"
+
+  # Default Init Containers Volume Permissions
+  defaultInitContainers:
+    volumePermissions:
+      image:
+        registry: registry-1.docker.io
+        repository: bitnamilegacy/os-shell
+        tag: "12-debian-12-r51"
+
+  # Console/Gateway Image
+  console:
+    image:
+      registry: registry-1.docker.io
+      repository: bitnamilegacy/minio-object-browser
+      tag: "2.0.2-debian-12-r3"
 
   # Authentication
   auth:
@@ -286,7 +335,7 @@ orchestrator:
 
   # Image configuration
   image:
-    repository: "cloudscan/cloudscan-orchestrator"
+    repository: "cloudscan-orchestrator"
     tag: ""  # Defaults to global.imageVersion
     pullPolicy: ""  # Defaults to global.imagePullPolicy
 
@@ -393,7 +442,7 @@ apiGateway:
   replicaCount: 2
 
   image:
-    repository: "cloudscan/cloudscan-apigateway"
+    repository: "cloudscan-api-gateway"
     tag: ""
     pullPolicy: ""
 
@@ -480,7 +529,7 @@ storage:
   replicaCount: 2
 
   image:
-    repository: "cloudscan/cloudscan-storage"
+    repository: "cloudscan-storage"
     tag: ""
     pullPolicy: ""
 
@@ -555,7 +604,7 @@ websocket:
   replicaCount: 2
 
   image:
-    repository: "cloudscan/cloudscan-websocket"
+    repository: "cloudscan-websocket"
     tag: ""
     pullPolicy: ""
 
@@ -594,7 +643,7 @@ ui:
   replicaCount: 2
 
   image:
-    repository: "cloudscan/cloudscan-ui"
+    repository: "cloudscan-ui"
     tag: ""
     pullPolicy: ""
 
@@ -642,7 +691,7 @@ runner:
   enabled: true
 
   image:
-    repository: "cloudscan/cloudscan-runner"
+    repository: "cloudscan-runner"
     tag: ""
     pullPolicy: ""
 

@@ -1,24 +1,24 @@
 
 orchestrator:
   image:
-    tag: "1.0.0"
+    tag: "2026.02.30-main"
 
 apiGateway:
   image:
-    tag: "1.0.0"
+    tag: "2026.02.13-main"
 
 storage:
   image:
-    tag: "1.0.0"
+    tag: "2026.02.18-main"
 
 websocket:
   image:
-    tag: "1.0.0"
+    tag: "2025.10.2-main"
 
 ui:
   image:
-    tag: "1.0.0"
+    tag: "2026.02.13-main"
 
 runner:
   image:
-    tag: "1.0.0"
+    tag: "2026.02.4-main"
