@@ -105,6 +105,12 @@ jobs:
           VERSION="${{ steps.chart_version.outputs.version }}"
           PACKAGE_FILE=".helm-packages/${{ env.CHART_NAME }}-${VERSION}.tgz"
 
+          # Save package file path
+          PACKAGE_FULL_PATH="$(pwd)/$PACKAGE_FILE"
+
+          # Stash any changes from Chart.yaml update
+          git stash push -u -m "Stash Chart.yaml changes"
+
           # Fetch or create gh-pages branch
           git fetch origin gh-pages 2>/dev/null || true
 
@@ -122,7 +128,7 @@ jobs:
           mkdir -p packages
 
           # Copy new package
-          cp "$PACKAGE_FILE" packages/
+          cp "$PACKAGE_FULL_PATH" packages/
 
           # Generate or update index
           if [ -f "index.yaml" ]; then
