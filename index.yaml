@@ -2,8 +2,44 @@ apiVersion: v1
 entries:
   cloudscan:
   - apiVersion: v2
+    appVersion: 2026.02.69
+    created: "2026-02-01T15:36:43.520217057Z"
+    dependencies:
+    - condition: onPrem.postgresql
+      name: postgresql
+      repository: https://charts.bitnami.com/bitnami
+      version: 18.2.3
+    - condition: onPrem.redis
+      name: redis
+      repository: https://charts.bitnami.com/bitnami
+      version: 24.1.2
+    - condition: onPrem.minio
+      name: minio
+      repository: https://charts.bitnami.com/bitnami
+      version: 17.0.21
+    description: CloudScan - Open Source Security & Quality Scanning Platform
+    digest: 3d3eadecf92a51ce10a96e79767b4c72e5b63db06f856d9d51cc9adf20161750
+    home: https://github.com/cloudscan/cloudscan
+    icon: https://raw.githubusercontent.com/cloudscan/cloudscan/main/assets/logo.svg
+    keywords:
+    - security
+    - sast
+    - sca
+    - scanning
+    - devsecops
+    maintainers:
+    - email: team@cloudscan.dev
+      name: CloudScan Team
+    name: cloudscan
+    sources:
+    - https://github.com/cloudscan/cloudscan
+    type: application
+    urls:
+    - https://Cloud-scan.github.io/cloudscan-umbrella/cloudscan-2026.02.69.tgz
+    version: 2026.02.69
+  - apiVersion: v2
     appVersion: 2026.02.68
-    created: "2026-02-01T15:02:19.017049562Z"
+    created: "2026-02-01T15:36:43.50339677Z"
     dependencies:
     - condition: onPrem.postgresql
       name: postgresql
@@ -39,7 +75,7 @@ entries:
     version: 2026.02.68
   - apiVersion: v2
     appVersion: 2026.02.67
-    created: "2026-02-01T15:02:18.99899709Z"
+    created: "2026-02-01T15:36:43.485923645Z"
     dependencies:
     - condition: onPrem.postgresql
       name: postgresql
@@ -75,7 +111,7 @@ entries:
     version: 2026.02.67
   - apiVersion: v2
     appVersion: 2026.02.66
-    created: "2026-02-01T15:02:18.981926417Z"
+    created: "2026-02-01T15:36:43.469140723Z"
     dependencies:
     - condition: onPrem.postgresql
       name: postgresql
@@ -111,7 +147,7 @@ entries:
     version: 2026.02.66
   - apiVersion: v2
     appVersion: 2026.02.65
-    created: "2026-02-01T15:02:18.965173362Z"
+    created: "2026-02-01T15:36:43.452526279Z"
     dependencies:
     - condition: onPrem.postgresql
       name: postgresql
@@ -147,7 +183,7 @@ entries:
     version: 2026.02.65
   - apiVersion: v2
     appVersion: 2026.02.64
-    created: "2026-02-01T15:02:18.946991326Z"
+    created: "2026-02-01T15:36:43.435654916Z"
     dependencies:
     - condition: onPrem.postgresql
       name: postgresql
@@ -183,7 +219,7 @@ entries:
     version: 2026.02.64
   - apiVersion: v2
     appVersion: 2026.02.63
-    created: "2026-02-01T15:02:18.928567614Z"
+    created: "2026-02-01T15:36:43.4176456Z"
     dependencies:
     - condition: onPrem.postgresql
       name: postgresql
@@ -219,7 +255,7 @@ entries:
     version: 2026.02.63
   - apiVersion: v2
     appVersion: 2026.02.62
-    created: "2026-02-01T15:02:18.911244103Z"
+    created: "2026-02-01T15:36:43.400299552Z"
     dependencies:
     - condition: onPrem.postgresql
       name: postgresql
@@ -255,7 +291,7 @@ entries:
     version: 2026.02.62
   - apiVersion: v2
     appVersion: 2026.02.61
-    created: "2026-02-01T15:02:18.893503094Z"
+    created: "2026-02-01T15:36:43.383110917Z"
     dependencies:
     - condition: onPrem.postgresql
       name: postgresql
@@ -291,7 +327,7 @@ entries:
     version: 2026.02.61
   - apiVersion: v2
     appVersion: 2026.02.60
-    created: "2026-02-01T15:02:18.876276287Z"
+    created: "2026-02-01T15:36:43.365070482Z"
     dependencies:
     - condition: onPrem.postgresql
       name: postgresql
@@ -327,7 +363,7 @@ entries:
     version: 2026.02.60
   - apiVersion: v2
     appVersion: 2026.02.59
-    created: "2026-02-01T15:02:18.857698197Z"
+    created: "2026-02-01T15:36:43.344849811Z"
     dependencies:
     - condition: onPrem.postgresql
       name: postgresql
@@ -363,7 +399,7 @@ entries:
     version: 2026.02.59
   - apiVersion: v2
     appVersion: 2026.02.58
-    created: "2026-02-01T15:02:18.840186145Z"
+    created: "2026-02-01T15:36:43.324634543Z"
     dependencies:
     - condition: onPrem.postgresql
       name: postgresql
@@ -399,7 +435,7 @@ entries:
     version: 2026.02.58
   - apiVersion: v2
     appVersion: 2026.02.57
-    created: "2026-02-01T15:02:18.82313787Z"
+    created: "2026-02-01T15:36:43.299830108Z"
     dependencies:
     - condition: onPrem.postgresql
       name: postgresql
@@ -435,7 +471,7 @@ entries:
     version: 2026.02.57
   - apiVersion: v2
     appVersion: 2026.02.56
-    created: "2026-02-01T15:02:18.803829857Z"
+    created: "2026-02-01T15:36:43.282266939Z"
     dependencies:
     - condition: onPrem.postgresql
       name: postgresql
@@ -471,7 +507,7 @@ entries:
     version: 2026.02.56
   - apiVersion: v2
     appVersion: 2026.02.55
-    created: "2026-02-01T15:02:18.784831272Z"
+    created: "2026-02-01T15:36:43.26486547Z"
     dependencies:
     - condition: onPrem.postgresql
       name: postgresql
@@ -507,7 +543,7 @@ entries:
     version: 2026.02.55
   - apiVersion: v2
     appVersion: 2026.02.54
-    created: "2026-02-01T15:02:18.765430616Z"
+    created: "2026-02-01T15:36:43.246675837Z"
     dependencies:
     - condition: onPrem.postgresql
       name: postgresql
@@ -543,7 +579,7 @@ entries:
     version: 2026.02.54
   - apiVersion: v2
     appVersion: 2026.02.53
-    created: "2026-02-01T15:02:18.734052637Z"
+    created: "2026-02-01T15:36:43.230160157Z"
     dependencies:
     - condition: onPrem.postgresql
       name: postgresql
@@ -579,7 +615,7 @@ entries:
     version: 2026.02.53
   - apiVersion: v2
     appVersion: 2026.02.52
-    created: "2026-02-01T15:02:18.716300266Z"
+    created: "2026-02-01T15:36:43.214091303Z"
     dependencies:
     - condition: onPrem.postgresql
       name: postgresql
@@ -615,7 +651,7 @@ entries:
     version: 2026.02.52
   - apiVersion: v2
     appVersion: 2026.02.51
-    created: "2026-02-01T15:02:18.697128202Z"
+    created: "2026-02-01T15:36:43.196124955Z"
     dependencies:
     - condition: onPrem.postgresql
       name: postgresql
@@ -651,7 +687,7 @@ entries:
     version: 2026.02.51
   - apiVersion: v2
     appVersion: 2026.02.50
-    created: "2026-02-01T15:02:18.678750772Z"
+    created: "2026-02-01T15:36:43.178391418Z"
     dependencies:
     - condition: onPrem.postgresql
       name: postgresql
@@ -687,7 +723,7 @@ entries:
     version: 2026.02.50
   - apiVersion: v2
     appVersion: 2026.02.49
-    created: "2026-02-01T15:02:18.661208371Z"
+    created: "2026-02-01T15:36:43.162384802Z"
     dependencies:
     - condition: onPrem.postgresql
       name: postgresql
@@ -723,7 +759,7 @@ entries:
     version: 2026.02.49
   - apiVersion: v2
     appVersion: 2026.01.35
-    created: "2026-02-01T15:02:18.632288174Z"
+    created: "2026-02-01T15:36:43.145283172Z"
     dependencies:
     - condition: onPrem.postgresql
       name: postgresql
@@ -757,4 +793,4 @@ entries:
     urls:
     - https://Cloud-scan.github.io/cloudscan-umbrella/cloudscan-2026.01.35.tgz
     version: 2026.01.35
-generated: "2026-02-01T15:02:18.607774829Z"
+generated: "2026-02-01T15:36:43.127209565Z"
