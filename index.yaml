@@ -2,8 +2,44 @@ apiVersion: v1
 entries:
   cloudscan:
   - apiVersion: v2
+    appVersion: 2026.02.58
+    created: "2026-02-01T13:58:55.153985357Z"
+    dependencies:
+    - condition: onPrem.postgresql
+      name: postgresql
+      repository: https://charts.bitnami.com/bitnami
+      version: 18.2.3
+    - condition: onPrem.redis
+      name: redis
+      repository: https://charts.bitnami.com/bitnami
+      version: 24.1.2
+    - condition: onPrem.minio
+      name: minio
+      repository: https://charts.bitnami.com/bitnami
+      version: 17.0.21
+    description: CloudScan - Open Source Security & Quality Scanning Platform
+    digest: 3dcade8903c464c9b7bc37218864cf95f2d963a8e3d843a7e488b692dfea01bf
+    home: https://github.com/cloudscan/cloudscan
+    icon: https://raw.githubusercontent.com/cloudscan/cloudscan/main/assets/logo.svg
+    keywords:
+    - security
+    - sast
+    - sca
+    - scanning
+    - devsecops
+    maintainers:
+    - email: team@cloudscan.dev
+      name: CloudScan Team
+    name: cloudscan
+    sources:
+    - https://github.com/cloudscan/cloudscan
+    type: application
+    urls:
+    - https://Cloud-scan.github.io/cloudscan-umbrella/cloudscan-2026.02.58.tgz
+    version: 2026.02.58
+  - apiVersion: v2
     appVersion: 2026.02.57
-    created: "2026-02-01T13:58:16.969320033Z"
+    created: "2026-02-01T13:58:55.136472902Z"
     dependencies:
     - condition: onPrem.postgresql
       name: postgresql
@@ -39,7 +75,7 @@ entries:
     version: 2026.02.57
   - apiVersion: v2
     appVersion: 2026.02.56
-    created: "2026-02-01T13:58:16.950530648Z"
+    created: "2026-02-01T13:58:55.118801619Z"
     dependencies:
     - condition: onPrem.postgresql
       name: postgresql
@@ -75,7 +111,7 @@ entries:
     version: 2026.02.56
   - apiVersion: v2
     appVersion: 2026.02.55
-    created: "2026-02-01T13:58:16.933278195Z"
+    created: "2026-02-01T13:58:55.101051294Z"
     dependencies:
     - condition: onPrem.postgresql
       name: postgresql
@@ -111,7 +147,7 @@ entries:
     version: 2026.02.55
   - apiVersion: v2
     appVersion: 2026.02.54
-    created: "2026-02-01T13:58:16.909976202Z"
+    created: "2026-02-01T13:58:55.083412495Z"
     dependencies:
     - condition: onPrem.postgresql
       name: postgresql
@@ -147,7 +183,7 @@ entries:
     version: 2026.02.54
   - apiVersion: v2
     appVersion: 2026.02.53
-    created: "2026-02-01T13:58:16.892033277Z"
+    created: "2026-02-01T13:58:55.065855983Z"
     dependencies:
     - condition: onPrem.postgresql
       name: postgresql
@@ -183,7 +219,7 @@ entries:
     version: 2026.02.53
   - apiVersion: v2
     appVersion: 2026.02.52
-    created: "2026-02-01T13:58:16.870429749Z"
+    created: "2026-02-01T13:58:55.047615079Z"
     dependencies:
     - condition: onPrem.postgresql
       name: postgresql
@@ -219,7 +255,7 @@ entries:
     version: 2026.02.52
   - apiVersion: v2
     appVersion: 2026.02.51
-    created: "2026-02-01T13:58:16.846988276Z"
+    created: "2026-02-01T13:58:55.030836193Z"
     dependencies:
     - condition: onPrem.postgresql
       name: postgresql
@@ -255,7 +291,7 @@ entries:
     version: 2026.02.51
   - apiVersion: v2
     appVersion: 2026.02.50
-    created: "2026-02-01T13:58:16.829455391Z"
+    created: "2026-02-01T13:58:55.012955339Z"
     dependencies:
     - condition: onPrem.postgresql
       name: postgresql
@@ -291,7 +327,7 @@ entries:
     version: 2026.02.50
   - apiVersion: v2
     appVersion: 2026.02.49
-    created: "2026-02-01T13:58:16.813691241Z"
+    created: "2026-02-01T13:58:54.995606078Z"
     dependencies:
     - condition: onPrem.postgresql
       name: postgresql
@@ -327,7 +363,7 @@ entries:
     version: 2026.02.49
   - apiVersion: v2
     appVersion: 2026.01.35
-    created: "2026-02-01T13:58:16.796669309Z"
+    created: "2026-02-01T13:58:54.978001505Z"
     dependencies:
     - condition: onPrem.postgresql
       name: postgresql
@@ -361,4 +397,4 @@ entries:
     urls:
     - https://Cloud-scan.github.io/cloudscan-umbrella/cloudscan-2026.01.35.tgz
     version: 2026.01.35
-generated: "2026-02-01T13:58:16.779801395Z"
+generated: "2026-02-01T13:58:54.960359587Z"
