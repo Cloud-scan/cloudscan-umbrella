@@ -34,8 +34,42 @@ spec:
           containerPort: {{ .Values.websocket.service.port }}
           protocol: TCP
         env:
-          {{- include "cloudscan.redis.env" . | nindent 10 }}
-          {{- include "cloudscan.common.env" . | nindent 10 }}
+          # Server configuration
+          - name: WS_PORT
+            value: {{ .Values.websocket.service.port | default "9090" | quote }}
+          - name: HTTP_PORT
+            value: {{ .Values.websocket.service.httpPort | default "8083" | quote }}
+          - name: ENVIRONMENT
+            value: {{ .Values.global.environment | default "production" | quote }}
+          - name: LOG_LEVEL
+            value: {{ .Values.global.logLevel | default "info" | quote }}
+          - name: LOG_FORMAT
+            value: "json"
+          # Redis configuration (for pub/sub)
+          {{- if or .Values.onPrem.redis .Values.global.redis.host }}
+          - name: REDIS_HOST
+            value: {{ include "cloudscan.redis.host" . }}
+          - name: REDIS_PORT
+            value: {{ .Values.global.redis.port | default "6379" | quote }}
+          {{- if .Values.global.redis.authEnabled }}
+          - name: REDIS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "cloudscan.redis.secretName" . }}
+                key: redis-password
+          {{- end }}
+          - name: REDIS_DB
+            value: "1"
+          - name: REDIS_TLS
+            value: {{ .Values.global.redis.secure | default "false" | quote }}
+          {{- end }}
+          # CORS configuration
+          - name: CORS_ALLOWED_ORIGINS
+            value: {{ .Values.websocket.cors.allowedOrigins | default "*" | quote }}
+          # Observability configuration
+          - name: PROMETHEUS_ENABLED
+            value: {{ .Values.monitoring.enabled | default "true" | quote }}
+          # Custom environment variables
           {{- with .Values.websocket.env }}
           {{- toYaml . | nindent 10 }}
           {{- end }}

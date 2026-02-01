@@ -34,7 +34,97 @@ spec:
           containerPort: {{ .Values.apiGateway.service.port }}
           protocol: TCP
         env:
-          {{- include "cloudscan.common.env" . | nindent 10 }}
+          # Server configuration
+          - name: HTTP_PORT
+            value: {{ .Values.apiGateway.service.port | default "8080" | quote }}
+          - name: ENVIRONMENT
+            value: {{ .Values.global.environment | default "production" | quote }}
+          - name: LOG_LEVEL
+            value: {{ .Values.global.logLevel | default "info" | quote }}
+          - name: LOG_FORMAT
+            value: "json"
+          # Database configuration
+          - name: DB_HOST
+            value: {{ include "cloudscan.postgres.host" . }}
+          - name: DB_PORT
+            value: {{ .Values.global.postgres.port | default "5432" | quote }}
+          - name: DB_USER
+            value: {{ .Values.global.postgres.user | default "cloudscan" | quote }}
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "cloudscan.postgres.secretName" . }}
+                key: password
+          - name: DB_NAME
+            value: {{ .Values.apiGateway.postgres.database | default "cloudscan_gateway" | quote }}
+          - name: DB_SSLMODE
+            value: {{ .Values.global.postgres.sslmode | default "prefer" | quote }}
+          - name: DB_MAX_CONNECTIONS
+            value: {{ .Values.apiGateway.postgres.maxConns | default "25" | quote }}
+          - name: DB_MIN_CONNECTIONS
+            value: {{ .Values.apiGateway.postgres.minConns | default "5" | quote }}
+          - name: DB_MIGRATIONS_PATH
+            value: "file://migrations"
+          # Redis configuration
+          {{- if or .Values.onPrem.redis .Values.global.redis.host }}
+          - name: REDIS_HOST
+            value: {{ include "cloudscan.redis.host" . }}
+          - name: REDIS_PORT
+            value: {{ .Values.global.redis.port | default "6379" | quote }}
+          {{- if .Values.global.redis.authEnabled }}
+          - name: REDIS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "cloudscan.redis.secretName" . }}
+                key: redis-password
+          {{- end }}
+          - name: REDIS_DB
+            value: "0"
+          - name: REDIS_TLS
+            value: {{ .Values.global.redis.secure | default "false" | quote }}
+          {{- end }}
+          # gRPC Service configuration
+          - name: ORCHESTRATOR_GRPC_URL
+            value: {{ include "cloudscan.fullname" . }}-orchestrator:{{ .Values.orchestrator.service.grpcPort | default "9999" }}
+          - name: ORCHESTRATOR_GRPC_TIMEOUT
+            value: {{ .Values.apiGateway.grpc.orchestratorTimeout | default "30s" | quote }}
+          - name: ORCHESTRATOR_GRPC_TLS
+            value: {{ .Values.apiGateway.grpc.orchestratorTLS | default "false" | quote }}
+          - name: STORAGE_GRPC_URL
+            value: {{ include "cloudscan.fullname" . }}-storage:{{ .Values.storage.service.grpcPort | default "9998" }}
+          - name: STORAGE_GRPC_TIMEOUT
+            value: {{ .Values.apiGateway.grpc.storageTimeout | default "30s" | quote }}
+          - name: STORAGE_GRPC_TLS
+            value: {{ .Values.apiGateway.grpc.storageTLS | default "false" | quote }}
+          # JWT configuration
+          {{- if .Values.apiGateway.jwt.existingSecret }}
+          - name: JWT_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.apiGateway.jwt.existingSecret }}
+                key: jwt-secret
+          {{- else }}
+          - name: JWT_SECRET
+            value: {{ .Values.apiGateway.jwt.secret | quote }}
+          {{- end }}
+          - name: JWT_EXPIRATION_HOURS
+            value: {{ .Values.apiGateway.jwt.expirationHours | default "24" | quote }}
+          # Rate limiting
+          - name: RATE_LIMIT_ENABLED
+            value: {{ .Values.apiGateway.rateLimit.enabled | default "true" | quote }}
+          - name: RATE_LIMIT_RPM
+            value: {{ .Values.apiGateway.rateLimit.requestsPerMinute | default "60" | quote }}
+          # CORS configuration
+          - name: CORS_ALLOWED_ORIGINS
+            value: {{ .Values.apiGateway.cors.allowedOrigins | default "*" | quote }}
+          - name: CORS_ALLOWED_METHODS
+            value: {{ .Values.apiGateway.cors.allowedMethods | default "GET,POST,PUT,DELETE,OPTIONS" | quote }}
+          - name: CORS_ALLOWED_HEADERS
+            value: {{ .Values.apiGateway.cors.allowedHeaders | default "Origin,Content-Type,Accept,Authorization" | quote }}
+          # Observability configuration
+          - name: PROMETHEUS_ENABLED
+            value: {{ .Values.monitoring.enabled | default "true" | quote }}
+          # Custom environment variables
           {{- with .Values.apiGateway.env }}
           {{- toYaml . | nindent 10 }}
           {{- end }}

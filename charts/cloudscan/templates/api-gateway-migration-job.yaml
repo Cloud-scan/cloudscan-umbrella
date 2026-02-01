@@ -1,0 +1,64 @@
+{{- if and .Values.apiGateway.enabled .Values.apiGateway.migration.enabled }}
+{{- $_ := set . "serviceName" "api-gateway" }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "cloudscan.fullname" . }}-api-gateway-migration
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cloudscan.service.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migration
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-5"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: {{ .Values.apiGateway.migration.backoffLimit | default 3 }}
+  activeDeadlineSeconds: {{ .Values.apiGateway.migration.activeDeadlineSeconds | default 600 }}
+  template:
+    metadata:
+      labels:
+        {{- include "cloudscan.service.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: migration
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      restartPolicy: Never
+      securityContext:
+        {{- include "cloudscan.podSecurityContext" . | nindent 8 }}
+      containers:
+      - name: liquibase
+        image: {{ printf "%s/%s-liquibase:%s" (.Values.apiGateway.image.registry | default .Values.global.imageRegistry | default "docker.io") .Values.apiGateway.image.repository (.Values.apiGateway.migration.imageTag | default .Values.apiGateway.image.tag | default "latest") }}
+        imagePullPolicy: {{ .Values.apiGateway.image.pullPolicy | default .Values.global.imagePullPolicy | default "IfNotPresent" }}
+        securityContext:
+          {{- include "cloudscan.containerSecurityContext" . | nindent 10 }}
+        env:
+        # PostgreSQL connection
+        - name: LIQUIBASE_URL
+          value: jdbc:postgresql://{{ include "cloudscan.postgres.host" . }}:{{ .Values.global.postgres.port | default "5432" }}/{{ .Values.apiGateway.postgres.database | default "cloudscan_gateway" }}?sslmode={{ .Values.global.postgres.sslmode | default "prefer" }}
+        - name: LIQUIBASE_USERNAME
+          value: {{ .Values.global.postgres.user | default "cloudscan" | quote }}
+        - name: LIQUIBASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "cloudscan.postgres.secretName" . }}
+              key: password
+        - name: LIQUIBASE_LOG_LEVEL
+          value: {{ .Values.apiGateway.migration.logLevel | default "INFO" | quote }}
+        resources:
+          {{- toYaml .Values.apiGateway.migration.resources | nindent 10 }}
+      {{- with .Values.apiGateway.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.apiGateway.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.apiGateway.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

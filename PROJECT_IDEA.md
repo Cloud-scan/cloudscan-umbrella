@@ -1,4 +1,4 @@
-# CloudScan - Open Source Security & Quality Scanning Platform
+cn# CloudScan - Open Source Security & Quality Scanning Platform
 
 > **A self-hosted, enterprise-grade security and code quality scanning platform that democratizes access to comprehensive code analysis**
 

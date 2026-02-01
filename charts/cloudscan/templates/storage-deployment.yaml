@@ -30,11 +30,99 @@ spec:
         securityContext:
           {{- include "cloudscan.containerSecurityContext" . | nindent 10 }}
         ports:
+        - name: grpc
+          containerPort: {{ .Values.storage.service.grpcPort }}
+          protocol: TCP
         - name: http
-          containerPort: {{ .Values.storage.service.port }}
+          containerPort: {{ .Values.storage.service.httpPort | default .Values.storage.service.port }}
           protocol: TCP
         env:
-          {{- include "cloudscan.common.env" . | nindent 10 }}
+          # Server configuration
+          - name: GRPC_PORT
+            value: {{ .Values.storage.service.grpcPort | default "9998" | quote }}
+          - name: HTTP_PORT
+            value: {{ .Values.storage.service.httpPort | default .Values.storage.service.port | default "8082" | quote }}
+          - name: ENVIRONMENT
+            value: {{ .Values.global.environment | default "production" | quote }}
+          - name: LOG_LEVEL
+            value: {{ .Values.global.logLevel | default "info" | quote }}
+          - name: LOG_FORMAT
+            value: "json"
+          # Database configuration
+          - name: DB_HOST
+            value: {{ include "cloudscan.postgres.host" . }}
+          - name: DB_PORT
+            value: {{ .Values.global.postgres.port | default "5432" | quote }}
+          - name: DB_USER
+            value: {{ .Values.global.postgres.user | default "cloudscan" | quote }}
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "cloudscan.postgres.secretName" . }}
+                key: password
+          - name: DB_NAME
+            value: {{ .Values.storage.postgres.database | default "storage" | quote }}
+          - name: DB_SSLMODE
+            value: {{ .Values.global.postgres.sslmode | default "prefer" | quote }}
+          - name: DB_MAX_CONNECTIONS
+            value: {{ .Values.storage.postgres.maxConns | default "25" | quote }}
+          - name: DB_MIN_CONNECTIONS
+            value: {{ .Values.storage.postgres.minConns | default "5" | quote }}
+          - name: DB_MIGRATIONS_PATH
+            value: "file://migrations"
+          # Storage configuration
+          - name: STORAGE_TYPE
+            value: {{ .Values.storage.storageType | default .Values.global.storage.type | default "minio" | quote }}
+          - name: DEFAULT_EXPIRATION_HOURS
+            value: {{ .Values.storage.defaultExpirationHours | default "24" | quote }}
+          # S3/MinIO configuration
+          {{- if or (eq (.Values.storage.storageType | default .Values.global.storage.type | default "minio") "s3") (eq (.Values.storage.storageType | default .Values.global.storage.type | default "minio") "minio") }}
+          - name: S3_ENDPOINT
+            value: {{ .Values.global.storage.s3.endpoint | default (printf "http://%s-minio:9000" .Release.Name) | quote }}
+          - name: S3_ACCESS_KEY_ID
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.global.storage.s3.existingSecret | default (printf "%s-minio" .Release.Name) }}
+                key: {{ if .Values.global.storage.s3.existingSecret }}accessKey{{ else }}root-user{{ end }}
+          - name: S3_SECRET_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.global.storage.s3.existingSecret | default (printf "%s-minio" .Release.Name) }}
+                key: {{ if .Values.global.storage.s3.existingSecret }}secretKey{{ else }}root-password{{ end }}
+          - name: S3_REGION
+            value: {{ .Values.global.storage.s3.region | default "us-east-1" | quote }}
+          - name: S3_BUCKET
+            value: {{ .Values.global.storage.s3.bucket | default "cloudscan-artifacts" | quote }}
+          - name: S3_USE_SSL
+            value: {{ .Values.global.storage.s3.useSSL | default "false" | quote }}
+          {{- end }}
+          # GCS configuration
+          {{- if eq (.Values.storage.storageType | default .Values.global.storage.type | default "minio") "gcs" }}
+          - name: GCS_PROJECT_ID
+            value: {{ .Values.global.storage.gcs.projectId | quote }}
+          - name: GCS_BUCKET
+            value: {{ .Values.global.storage.gcs.bucket | quote }}
+          {{- if .Values.global.storage.gcs.credentialsSecret }}
+          - name: GOOGLE_APPLICATION_CREDENTIALS
+            value: "/etc/gcs/credentials.json"
+          {{- end }}
+          {{- end }}
+          # Azure Blob configuration
+          {{- if eq (.Values.storage.storageType | default .Values.global.storage.type | default "minio") "azure" }}
+          - name: AZURE_ACCOUNT_NAME
+            value: {{ .Values.global.storage.azure.accountName | quote }}
+          - name: AZURE_ACCOUNT_KEY
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.global.storage.azure.existingSecret | default (printf "%s-azure-storage" .Release.Name) }}
+                key: accountKey
+          - name: AZURE_CONTAINER
+            value: {{ .Values.global.storage.azure.container | quote }}
+          {{- end }}
+          # Observability configuration
+          - name: PROMETHEUS_ENABLED
+            value: {{ .Values.monitoring.enabled | default "true" | quote }}
+          # Custom environment variables
           {{- with .Values.storage.env }}
           {{- toYaml . | nindent 10 }}
           {{- end }}
@@ -55,16 +143,26 @@ spec:
         volumeMounts:
         - name: tmp
           mountPath: /tmp
-        {{- if and .Values.storage.persistence.enabled (eq .Values.storage.storageType "local") }}
+        {{- if and .Values.storage.persistence.enabled (eq (.Values.storage.storageType | default .Values.global.storage.type | default "minio") "local") }}
         - name: storage-data
           mountPath: /data
+        {{- end }}
+        {{- if and (eq (.Values.storage.storageType | default .Values.global.storage.type | default "minio") "gcs") .Values.global.storage.gcs.credentialsSecret }}
+        - name: gcs-credentials
+          mountPath: /etc/gcs
+          readOnly: true
         {{- end }}
       volumes:
       - name: tmp
         emptyDir: {}
-      {{- if and .Values.storage.persistence.enabled (eq .Values.storage.storageType "local") }}
+      {{- if and .Values.storage.persistence.enabled (eq (.Values.storage.storageType | default .Values.global.storage.type | default "minio") "local") }}
       - name: storage-data
         persistentVolumeClaim:
           claimName: {{ include "cloudscan.fullname" . }}-storage
+      {{- end }}
+      {{- if and (eq (.Values.storage.storageType | default .Values.global.storage.type | default "minio") "gcs") .Values.global.storage.gcs.credentialsSecret }}
+      - name: gcs-credentials
+        secret:
+          secretName: {{ .Values.global.storage.gcs.credentialsSecret }}
       {{- end }}
 {{- end }}

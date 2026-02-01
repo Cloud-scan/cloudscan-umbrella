@@ -34,7 +34,59 @@ spec:
           containerPort: {{ .Values.ui.service.port }}
           protocol: TCP
         env:
-          {{- include "cloudscan.common.env" . | nindent 10 }}
+          # Server configuration
+          - name: PORT
+            value: {{ .Values.ui.service.port | default "8080" | quote }}
+          - name: SERVER_PORT
+            value: {{ .Values.ui.service.port | default "8080" | quote }}
+          - name: ENVIRONMENT
+            value: {{ .Values.global.environment | default "production" | quote }}
+          - name: LOG_LEVEL
+            value: {{ .Values.global.logLevel | default "info" | quote }}
+          - name: LOG_FORMAT
+            value: "json"
+          # Spring Boot profile
+          - name: SPRING_PROFILES_ACTIVE
+            value: {{ .Values.global.environment | default "production" | quote }}
+          # Database configuration (for Spring Boot backend)
+          - name: DB_HOST
+            value: {{ include "cloudscan.postgres.host" . }}
+          - name: DB_PORT
+            value: {{ .Values.global.postgres.port | default "5432" | quote }}
+          - name: DB_USER
+            value: {{ .Values.global.postgres.user | default "cloudscan" | quote }}
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "cloudscan.postgres.secretName" . }}
+                key: password
+          - name: DB_NAME
+            value: {{ .Values.ui.postgres.database | default "ui_backend" | quote }}
+          - name: DB_SSLMODE
+            value: {{ .Values.global.postgres.sslmode | default "prefer" | quote }}
+          - name: SPRING_DATASOURCE_URL
+            value: jdbc:postgresql://{{ include "cloudscan.postgres.host" . }}:{{ .Values.global.postgres.port | default "5432" }}/{{ .Values.ui.postgres.database | default "ui_backend" }}?sslmode={{ .Values.global.postgres.sslmode | default "prefer" }}
+          - name: SPRING_DATASOURCE_USERNAME
+            value: {{ .Values.global.postgres.user | default "cloudscan" | quote }}
+          - name: SPRING_DATASOURCE_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "cloudscan.postgres.secretName" . }}
+                key: password
+          # Backend API URLs
+          - name: API_GATEWAY_URL
+            value: http://{{ include "cloudscan.fullname" . }}-api-gateway:{{ .Values.apiGateway.service.port | default "8080" }}
+          - name: WEBSOCKET_URL
+            value: ws://{{ include "cloudscan.fullname" . }}-websocket:{{ .Values.websocket.service.port | default "9090" }}
+          # Frontend runtime configuration (for React app)
+          - name: VITE_API_URL
+            value: {{ .Values.ui.frontend.apiUrl | default "/api" | quote }}
+          - name: VITE_WS_URL
+            value: {{ .Values.ui.frontend.wsUrl | default "/ws" | quote }}
+          # Observability configuration
+          - name: PROMETHEUS_ENABLED
+            value: {{ .Values.monitoring.enabled | default "true" | quote }}
+          # Custom environment variables
           {{- with .Values.ui.env }}
           {{- toYaml . | nindent 10 }}
           {{- end }}

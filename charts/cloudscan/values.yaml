@@ -21,6 +21,12 @@ global:
   # This can be overridden per service
   imageVersion: "latest"
 
+  # Environment name: development, staging, production
+  environment: "production"
+
+  # Log level: debug, info, warn, error
+  logLevel: "info"
+
   # Kubernetes storage class for persistent volumes
   storageClass: ""
 
@@ -84,6 +90,8 @@ global:
       secretKey: ""
       # Use existing secret (keys: accessKey, secretKey)
       existingSecret: ""
+      # Use SSL/TLS for S3 connections
+      useSSL: false
     # GCS configuration
     gcs:
       bucket: ""
@@ -306,6 +314,9 @@ orchestrator:
   postgres:
     # Database name for orchestrator
     database: "orchestrator"
+    # Connection pool settings
+    maxConns: 25
+    minConns: 5
     # These inherit from global.postgres unless overridden:
     # host: ""
     # port: 5432
@@ -313,6 +324,21 @@ orchestrator:
     # password: ""
     # sslmode: ""
     # existingSecret: ""
+
+  # Database migration configuration (Liquibase)
+  migration:
+    enabled: true
+    imageTag: ""  # Defaults to orchestrator.image.tag
+    logLevel: "INFO"
+    backoffLimit: 3
+    activeDeadlineSeconds: 600
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
 
   # Environment variables
   env: []
@@ -396,7 +422,48 @@ apiGateway:
     enabled: true
     requestsPerMinute: 60
 
+  # gRPC client configuration
+  grpc:
+    orchestratorTimeout: "30s"
+    orchestratorTLS: false
+    storageTimeout: "30s"
+    storageTLS: false
+
+  # CORS configuration
+  cors:
+    allowedOrigins: "*"
+    allowedMethods: "GET,POST,PUT,DELETE,OPTIONS"
+    allowedHeaders: "Origin,Content-Type,Accept,Authorization"
+
+  # Database configuration (overrides global)
+  postgres:
+    # Database name for api gateway
+    database: "cloudscan_gateway"
+    # Connection pool settings
+    maxConns: 25
+    minConns: 5
+
+  # Database migration configuration (Liquibase)
+  migration:
+    enabled: true
+    imageTag: ""  # Defaults to apiGateway.image.tag
+    logLevel: "INFO"
+    backoffLimit: 3
+    activeDeadlineSeconds: 600
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
   env: []
+  # Example environment variables:
+  # - name: ORCHESTRATOR_GRPC_URL
+  #   value: "{{ .Release.Name }}-cloudscan-orchestrator:9999"
+  # - name: STORAGE_GRPC_URL
+  #   value: "{{ .Release.Name }}-cloudscan-storage:9998"
   envFrom: []
   nodeSelector: {}
   tolerations: []
@@ -419,6 +486,11 @@ storage:
 
   service:
     type: ClusterIP
+    # gRPC port
+    grpcPort: 9998
+    # HTTP port
+    httpPort: 8082
+    # Deprecated: use httpPort instead
     port: 8082
     annotations: {}
 
@@ -431,6 +503,32 @@ storage:
   # Storage type configuration (inherits from global.storage.type)
   # Options: s3, minio, gcs, azure, local
   storageType: ""
+
+  # Default expiration time for presigned URLs (in hours)
+  defaultExpirationHours: 24
+
+  # Database configuration (overrides global)
+  postgres:
+    # Database name for storage
+    database: "storage"
+    # Connection pool settings
+    maxConns: 25
+    minConns: 5
+
+  # Database migration configuration (Liquibase)
+  migration:
+    enabled: true
+    imageTag: ""  # Defaults to storage.image.tag
+    logLevel: "INFO"
+    backoffLimit: 3
+    activeDeadlineSeconds: 600
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
 
   resources:
     requests:
@@ -464,7 +562,12 @@ websocket:
   service:
     type: ClusterIP
     port: 9090
+    httpPort: 8083
     annotations: {}
+
+  # CORS configuration
+  cors:
+    allowedOrigins: "*"
 
   resources:
     requests:
@@ -512,6 +615,15 @@ ui:
   # Database configuration for UI backend (Spring Boot)
   postgres:
     database: "ui_backend"
+
+  # Frontend runtime configuration (for React app)
+  frontend:
+    # API URL (relative or absolute)
+    apiUrl: "/api"
+    # WebSocket URL (relative or absolute)
+    wsUrl: "/ws"
+
+  # Note: UI does not require database migrations as it's a static SPA
 
   env: []
   envFrom: []
