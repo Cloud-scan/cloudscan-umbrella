@@ -102,32 +102,46 @@ jobs:
       - name: Publish to GitHub Pages
         run: |
           set -e
-
           VERSION="${{ steps.chart_version.outputs.version }}"
           PACKAGE_FILE=".helm-packages/${{ env.CHART_NAME }}-${VERSION}.tgz"
-          GH_PAGES_DIR="$(mktemp -d)"
 
-          git fetch origin gh-pages || true
+          # Fetch or create gh-pages branch
+          git fetch origin gh-pages 2>/dev/null || true
 
-          # Create clean gh-pages worktree
-          git worktree add "$GH_PAGES_DIR" gh-pages || \
-            git worktree add "$GH_PAGES_DIR" --orphan gh-pages
+          if git rev-parse origin/gh-pages >/dev/null 2>&1; then
+            # Branch exists on remote, check it out
+            git checkout gh-pages
+          else
+            # Create new orphan branch
+            git checkout --orphan gh-pages
+            # Remove all files from index
+            git rm -rf . 2>/dev/null || true
+          fi
 
-          cd "$GH_PAGES_DIR"
-
-          # Ensure gh-pages is clean
-          rm -rf *
-
+          # Create packages directory
           mkdir -p packages
-          cp "$GITHUB_WORKSPACE/$PACKAGE_FILE" packages/
 
-          helm repo index packages \
-            --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+          # Copy new package
+          cp "$PACKAGE_FILE" packages/
 
-          git add packages index.yaml
-          git commit -m "Publish ${{ env.CHART_NAME }} chart version ${VERSION}" || echo "No changes"
+          # Generate or update index
+          if [ -f "index.yaml" ]; then
+            helm repo index packages --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }} --merge index.yaml
+          else
+            helm repo index packages --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+          fi
 
-          git push origin gh-pages --force-with-lease
+          # Move index to root
+          mv packages/index.yaml index.yaml
+
+          # Commit and push
+          git add packages/ index.yaml
+          git commit -m "Publish ${{ env.CHART_NAME }} chart version ${VERSION}
+
+          Source: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+          Triggered by: ${{ github.actor }}" || echo "No changes to commit"
+
+          git push origin gh-pages
 
       - name: Ensure Helm login
         id: docker_login
