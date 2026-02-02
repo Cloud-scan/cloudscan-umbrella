@@ -2,8 +2,8 @@ apiVersion: v1
 entries:
   cloudscan:
   - apiVersion: v2
-    appVersion: 2026.02.54
-    created: "2026-02-02T15:12:42.354622791Z"
+    appVersion: 2026.02.55
+    created: "2026-02-02T15:21:47.221492922Z"
     dependencies:
     - condition: onPrem.postgresql
       name: postgresql
@@ -18,7 +18,7 @@ entries:
       repository: https://charts.bitnami.com/bitnami
       version: 17.0.21
     description: CloudScan - Open Source Security & Quality Scanning Platform
-    digest: 33e16c675c556259c0b8c30ac1ea09a7d0e5637de67a98347751a898f84958f7
+    digest: a340021ddae92c60e1f8b999723143c5eaf63fdb53730c47639259fac36c743a
     home: https://github.com/cloudscan/cloudscan
     icon: https://raw.githubusercontent.com/cloudscan/cloudscan/main/assets/logo.svg
     keywords:
@@ -35,6 +35,6 @@ entries:
     - https://github.com/cloudscan/cloudscan
     type: application
     urls:
-    - https://Cloud-scan.github.io/cloudscan-umbrella/cloudscan-2026.02.54.tgz
-    version: 2026.02.54
-generated: "2026-02-02T15:12:42.336655062Z"
+    - https://Cloud-scan.github.io/cloudscan-umbrella/cloudscan-2026.02.55.tgz
+    version: 2026.02.55
+generated: "2026-02-02T15:21:47.203634202Z"
